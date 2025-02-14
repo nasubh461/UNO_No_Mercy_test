@@ -13,4 +13,4 @@ RUN pip install -r requirements.txt
 EXPOSE 5000
 
 # Running the app.py
-CMD ["python3", "Server/app.py"]
+CMD ["python3", "app.py"]
