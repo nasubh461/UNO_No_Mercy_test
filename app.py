@@ -38,11 +38,17 @@ def join_room_route():
 def handle_join(data):
     room_code = data['room_code']
     username = data['username']
-    join_room(room_code)
-    game = rooms[room_code]
-    hands = game.deal_cards()
-    emit('update_game', {'hands': hands, 'players': game.players}, room=room_code)
 
+    if room_code in rooms:
+        game = rooms[room_code]
+        if username not in game.players:
+            game.players.append(username)
+
+        join_room(room_code)
+
+        # Broadcast updated player list to the room
+        emit('update_players', {'players': game.players}, room=room_code)
+        
 @socketio.on('play_card')
 def handle_play_card(data):
     room_code = data['room_code']
@@ -53,7 +59,13 @@ def handle_play_card(data):
     game.next_turn()
     emit('update_game', {'players': game.players, 'current_turn': game.get_current_player()}, room=room_code)
 
-
+@app.route('/room/<room_code>')
+def room(room_code):
+    if room_code in rooms:
+        return render_template('room.html', room_code=room_code)
+    else:
+        return "Room not found", 404
+    
 # To be implementedn to close the room when the game is over or the room owner left the room
 """
 @app.route('/close_room', methods=['POST'])
