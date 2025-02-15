@@ -77,5 +77,3 @@ if __name__ == '__main__':
 # Remove the comment from the line below to run the app in production m
     #socketio.run(app, debug=True)
 
-
-# Check
