@@ -53,7 +53,13 @@ def handle_play_card(data):
     game.next_turn()
     emit('update_game', {'players': game.players, 'current_turn': game.get_current_player()}, room=room_code)
 
-
+@app.route('/room/<room_code>')
+def room(room_code):
+    if room_code in rooms:
+        return render_template('room.html', room_code=room_code)
+    else:
+        return "Room not found", 404
+    
 # To be implementedn to close the room when the game is over or the room owner left the room
 """
 @app.route('/close_room', methods=['POST'])

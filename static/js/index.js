@@ -17,12 +17,17 @@ document.getElementById('close-join-room').addEventListener('click', function() 
 document.getElementById('create-room-submit').addEventListener('click', function() {
     let playerName = document.getElementById('create-player-name').value;
     if (playerName) {
-        // Simulate API call to create room and get room code
-        let roomCode = "123456"; // Replace with actual API call
-        alert("Room created! Your room code is: " + roomCode);
-        document.getElementById('create-room-modal').style.display = 'none';
+        fetch('/create_room', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                let roomCode = data.room_code;
+                alert("Room created! Your room code is: " + roomCode);
+                window.location.href = "/room/" + roomCode; // Redirect to the room page
+            })
+            .catch(error => console.error('Error creating room:', error));
     }
 });
+
 
 document.getElementById('join-room-submit').addEventListener('click', function() {
     let playerName = document.getElementById('join-player-name').value;
