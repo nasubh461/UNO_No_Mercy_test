@@ -28,16 +28,26 @@ document.getElementById('create-room-submit').addEventListener('click', function
     }
 });
 
-
 document.getElementById('join-room-submit').addEventListener('click', function() {
     let playerName = document.getElementById('join-player-name').value;
     let roomCode = document.getElementById('join-room-code').value;
+
     if (playerName && roomCode) {
-        // Simulate joining room
-        alert("Joining room with code: " + roomCode);
-        // Redirect to room page
-        window.location.href = "/room/" + roomCode;
-        document.getElementById('join-room-modal').style.display = 'none';
+        fetch('/join_room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: playerName, room_code: roomCode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'joined') {
+                localStorage.setItem('player_name', playerName);
+                window.location.href = "/room/" + roomCode;  // Redirect to room
+            } else {
+                alert("Room not found.");
+            }
+        })
+        .catch(error => console.error('Error joining room:', error));
     }
 });
 

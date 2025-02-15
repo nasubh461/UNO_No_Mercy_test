@@ -1,10 +1,37 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROOM</title>
+    <title>UNO Room</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
 </head>
 <body>
-    
+    <h1>UNO Room</h1>
+    <p>Room Code: <span id="room-code">{{ room_code }}</span></p>
+    <h2>Players:</h2>
+    <ul id="player-list"></ul>
+
+    <script>
+        var socket = io();
+        var roomCode = "{{ room_code }}";
+        var playerName = localStorage.getItem('player_name') || prompt("Enter your name:");
+
+        if (playerName) {
+            localStorage.setItem('player_name', playerName);
+            socket.emit('join', { room_code: roomCode, username: playerName });
+        }
+
+        // Listen for player updates
+        socket.on('update_players', function(data) {
+            var playerList = document.getElementById('player-list');
+            playerList.innerHTML = '';  // Clear list
+            data.players.forEach(function(player) {
+                var li = document.createElement('li');
+                li.textContent = player;
+                playerList.appendChild(li);
+            });
+        });
+    </script>
 </body>
 </html>
