@@ -1,8 +1,39 @@
 <!DOCTYPE html>
 <html>
-<head><title>Flask App</title></head>
+<head>
+    <title>UNO Landing Page</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
 <body>
-    <h1>Welcome to Flask</h1>
+    <h1>Welcome to UNO</h1>
+    <button id="create-room-btn">Create Room</button>
+    <button id="join-room-btn">Join Room</button>
+
+    <!-- Create Room Modal -->
+    <div id="create-room-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-create-room">&times;</span>
+            <h2>Create Room</h2>
+            <label for="create-player-name">Player Name:</label>
+            <input type="text" id="create-player-name">
+            <button id="create-room-submit">Create Room</button>
+        </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="join-room-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-join-room">&times;</span>
+            <h2>Join Room</h2>
+            <label for="join-player-name">Player Name:</label>
+            <input type="text" id="join-player-name">
+            <label for="join-room-code">Room Code:</label>
+            <input type="text" id="join-room-code">
+            <button id="join-room-submit">Join Room</button>
+        </div>
+    </div>
+
+    <script src="/static/js/index.js"></script>
 </body>
 </html>
 
