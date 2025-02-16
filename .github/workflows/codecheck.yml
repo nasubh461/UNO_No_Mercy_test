@@ -1,0 +1,35 @@
+name: Syntax and Lint Checks
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Check Python syntax
+        run: python -m compileall .
+
+      - name: Run flake8 for Python syntax check
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Install Hadolint (Dockerfile Linter)
+        run: |
+          wget -O /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+
+      - name: Run Hadolint on Dockerfile
+        run: hadolint Dockerfile
