@@ -18,21 +18,29 @@ def index():
 
 @app.route('/create_room', methods=['POST'])
 def create_room():
+    data = request.get_json()
+    player_name = data.get('username')  # Get player name from request
     room_code = generate_room_code()
+
     game = UnoGame()
-    rooms[room_code] = game
-    return {'room_code': room_code}
+    game.players.append(player_name)  # Add player to room
+
+    rooms[room_code] = game  # Store game in rooms dictionary
+    return jsonify({'room_code': room_code})
 
 @app.route('/join_room', methods=['POST'])
 def join_room_route():
-    room_code = request.json.get('room_code')
-    username = request.json.get('username')
+    data = request.json
+    room_code = data.get('room_code')
+    username = data.get('username')
+
     if room_code in rooms:
         game = rooms[room_code]
-        game.players.append(username)
-        return {'status': 'joined'}
+        if username not in game.players:
+            game.players.append(username)  # Add player to room
+        return jsonify({'status': 'joined'})
     else:
-        return {'status': 'room_not_found'}
+        return jsonify({'status': 'room_not_found'})
 
 @socketio.on('join')
 def handle_join(data):
@@ -46,7 +54,7 @@ def handle_join(data):
 
         join_room(room_code)
 
-        # Broadcast updated player list to the room
+        # Broadcast updated player list to everyone in the room
         emit('update_players', {'players': game.players}, room=room_code)
         
 @socketio.on('play_card')

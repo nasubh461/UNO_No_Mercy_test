@@ -14,12 +14,29 @@
 
     <script>
         var socket = io();
+        var urlParams = new URLSearchParams(window.location.search);
+        var playerName = urlParams.get('player'); // Get player name from URL
         var roomCode = "{{ room_code }}";
-        var playerName = localStorage.getItem('player_name') || prompt("Enter your name:");
 
         if (playerName) {
-            localStorage.setItem('player_name', playerName);
-            socket.emit('join', { room_code: roomCode, username: playerName });
+            fetch('/join_room', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: playerName, room_code: roomCode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'joined') {
+                    socket.emit('join', { room_code: roomCode, username: playerName });
+                } else {
+                    alert("Room not found.");
+                    window.location.href = "/";
+                }
+            })
+            .catch(error => console.error('Error joining room:', error));
+        } else {
+            alert("No player name provided.");
+            window.location.href = "/";
         }
 
         // Listen for player updates

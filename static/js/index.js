@@ -17,14 +17,17 @@ document.getElementById('close-join-room').addEventListener('click', function() 
 document.getElementById('create-room-submit').addEventListener('click', function() {
     let playerName = document.getElementById('create-player-name').value;
     if (playerName) {
-        fetch('/create_room', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                let roomCode = data.room_code;
-                alert("Room created! Your room code is: " + roomCode);
-                window.location.href = "/room/" + roomCode; // Redirect to the room page
-            })
-            .catch(error => console.error('Error creating room:', error));
+        fetch('/create_room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: playerName }) // Send player name
+        })
+        .then(response => response.json())
+        .then(data => {
+            let roomCode = data.room_code;
+            window.location.href = `/room/${roomCode}?player=${encodeURIComponent(playerName)}`; // Pass player name as query param
+        })
+        .catch(error => console.error('Error creating room:', error));
     }
 });
 
