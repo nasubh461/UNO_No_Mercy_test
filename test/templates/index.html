@@ -7,12 +7,19 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <div class="draw-deck-container">
+        <div class="draw-deck">
+            {% for card in draw_deck %}
+                <div class="dcard" style="--i: {{ loop.index0 }};">{{ card['color'] }} {{ card['type'] }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    <button class="action-button">Draw</button>
     <div class="card-container">
         {% for i in range(num_cards) %}
             <div class="card" style="--i: {{ i }};">Card {{ i+1 }}</div>
         {% endfor %}
     </div>
-
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
