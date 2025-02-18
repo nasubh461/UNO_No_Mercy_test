@@ -1,32 +1,84 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 from flask_socketio import SocketIO, join_room, leave_room, emit
-from game import UnoGame
 import random
 import string
-
+import secrets
+import threading
+import time
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-rooms = {}
+rooms = {} # {'ROOMID' : ['playername1','playername1']}
+sessions = {} # {'7c40fd705e1511751f6fbf5dd94936c7': {'username': 'player1', 'room_code': 'ANOLXK'}}
+user_sockets = {} # {'_41gysDDBbyMJtXhAAAB': '7c40fd705e1511751f6fbf5dd94936c7'}
+disconnect_timers = {}
+
 def generate_room_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+def generate_session_token():
+    return secrets.token_hex(16)
+
+def start_thread(token, username, room_code):
+        stop_event = threading.Event()
+        thread = threading.Thread(target=delayed_removal, args=(token, stop_event, username, room_code))
+        disconnect_timers[token] = (thread, stop_event)
+        thread.start()
+
+def stop_thread(token):
+    if token in disconnect_timers:
+        print(f"Stopping thread {token}...")
+        disconnect_timers[token][1].set()  # Set the stop event
+        disconnect_timers[token][0].join()  # Wait for the thread to finish
+        del disconnect_timers[token]
+    else:
+        print(f"Thread {token} not found")
+
+def delayed_removal(token, stop_event, username, room_code):
+    """Remove user from session and room after 3 minutes if they don't reconnect."""
+    print(f"Thread {token} started")
+    for _ in range(30):  # Check every second for 30 seconds
+        if stop_event.is_set():
+            print(f"User {username} rejoined, skipping removal.")
+            return
+        time.sleep(1)
+        
+    # Check again before deleting
+    if room_code in rooms and username in rooms[room_code]:
+        rooms[room_code].remove(username)
+        if not rooms[room_code]:  # Remove empty room
+            del rooms[room_code]
+
+    if token in sessions:
+        del sessions[token]
+
+    print(f"User {username} permanently removed after 3 minutes of inactivity.")
+    print(rooms)
+    if room_code in rooms: # Remove empty room                                 
+        socketio.emit("update_players", {"players": rooms.get(room_code, [])}, room=room_code)
+    print(f"Thread {token} stopped")
 
 @app.route('/')
 def index():
     return render_template('main.html')
 
+
 @app.route('/create_room', methods=['POST'])
 def create_room():
     data = request.get_json()
-    player_name = data.get('username')  # Get player name from request
+    player_name = data.get('username')
     room_code = generate_room_code()
+    session_token = generate_session_token()
 
-    game = UnoGame()
-    game.players.append(player_name)  # Add player to room
-
-    rooms[room_code] = game  # Store game in rooms dictionary
-    return jsonify({'room_code': room_code})
+    if room_code not in rooms:
+        rooms[room_code] = []
+    
+    rooms[room_code].append(player_name)
+    sessions[session_token] = {'username': player_name, 'room_code': room_code}
+    print(sessions)
+    response = make_response(jsonify({'room_code': room_code, 'session_token': session_token}))
+    return response
 
 @app.route('/join_room', methods=['POST'])
 def join_room_route():
@@ -35,37 +87,17 @@ def join_room_route():
     username = data.get('username')
 
     if room_code in rooms:
-        game = rooms[room_code]
-        if username not in game.players:
-            game.players.append(username)  # Add player to room
-        return jsonify({'status': 'joined'})
-    else:
-        return jsonify({'status': 'room_not_found'})
-
-@socketio.on('join')
-def handle_join(data):
-    room_code = data['room_code']
-    username = data['username']
-
-    if room_code in rooms:
-        game = rooms[room_code]
-        if username not in game.players:
-            game.players.append(username)
-
-        join_room(room_code)
-
-        # Broadcast updated player list to everyone in the room
-        emit('update_players', {'players': game.players}, room=room_code)
+        if username in rooms[room_code]:  
+            return jsonify({'status': 'duplicate'})  # Prevent duplicate usernames
         
-@socketio.on('play_card')
-def handle_play_card(data):
-    room_code = data['room_code']
-    username = data['username']
-    card = data['card']
-    game = rooms[room_code]
-    game.play_card(username, card)
-    game.next_turn()
-    emit('update_game', {'players': game.players, 'current_turn': game.get_current_player()}, room=room_code)
+        session_token = generate_session_token()
+        rooms[room_code].append(username)
+        sessions[session_token] = {'username': username, 'room_code': room_code}
+        print(sessions)
+        response = make_response(jsonify({'status': 'joined', 'session_token': session_token}))
+        return response
+    else:
+        return jsonify({'status': 'room_not_found'})   
 
 @app.route('/room/<room_code>')
 def room(room_code):
@@ -74,26 +106,133 @@ def room(room_code):
     else:
         return "Room not found", 404
     
-# To be implementedn to close the room when the game is over or the room owner left the room
-"""
-@app.route('/close_room', methods=['POST'])
-def close_room():
-    # Get the room code from the request
+@app.route('/get_username', methods=['POST'])
+def get_username():
     data = request.get_json()
-    room_code = data.get('room_code')
+    session_token = data.get('session_token')
 
-    # Check if the room exists in the rooms dictionary
-    if room_code in rooms:
-        # Destroy/close the room by removing it from the dictionary
-        del rooms[room_code]
-        return {'status': 'room_closed', 'message': f'Room {room_code} has been closed.'}
+    if session_token in sessions:
+        return jsonify({'status': 'success', 'username': sessions[session_token]['username']})
     else:
-        return {'status': 'room_not_found', 'message': 'The room does not exist.'}
-"""
+        return jsonify({'status': 'invalid'})
+
+@socketio.on("join_room")
+def handle_join_room(data):
+    """Handle joining a room, check if the user is rejoining and cancel removal."""
+    room_code = data.get("room")
+    username = data.get("username")
+    session_token = data.get("session")
+
+    print(session_token)
+    # if session_token in sessions:
+    #     all_session_tokens = list(user_sockets.values())
+    print(user_sockets)
+    print(sessions)
+    print(rooms)       
+
+    if room_code in rooms and username not in rooms[room_code]:
+        rooms[room_code].append(username)
+
+    if session_token in disconnect_timers:
+        # Cancel the delayed removal timer if user re-joins within 3 minutes
+        stop_thread(session_token)
+        print(f"User {username} rejoined within 3 minutes. Canceling removal.")
+
+    sessions[session_token] = {'username': username, 'room_code': room_code}
+    user_sockets[request.sid] = session_token
+
+    all_session_tokens = list(user_sockets.values())
+
+    dublicate = 0
+
+    for i in all_session_tokens:
+        if session_token == i:
+            dublicate += 1
+
+    if dublicate >= 2:
+        index_not_to_del = len(all_session_tokens) - 1 - all_session_tokens[::-1].index(session_token)
+        for i, token in enumerate(all_session_tokens):
+            if token == session_token and i != index_not_to_del:
+                index_to_del = i
+                token_to_delete = list(user_sockets.keys())[index_to_del]       
+                del user_sockets[token_to_delete]       
+
+
+    
+
+    join_room(room_code)
+
+    print(user_sockets)
+    print(sessions)
+    print(rooms)
+    emit("update_players", {"players": rooms[room_code]}, room=room_code)
+
+@socketio.on("leave_room")
+def handle_leave_room(data):
+    room_code = data.get("room")
+    username = data.get("username")
+    session_token = data.get("session")
+
+    if room_code in rooms and username in rooms[room_code]:
+        rooms[room_code].remove(username)
+
+        if session_token in sessions:
+            del sessions[session_token]
+
+        # If room is empty, delete it
+        if not rooms[room_code]:  
+            del rooms[room_code]
+
+    print("Updated Sessions:", sessions)
+    print("Updated Rooms:", rooms)
+    leave_room(room_code)
+    print(rooms)
+    emit("update_players", {"players": rooms.get(room_code, [])}, room=room_code)
+    
+@socketio.on("connect")
+def handle_connect():
+    print(f"Client connected: {request.sid}")
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    sid = request.sid
+    print(f"Client transport close disconnected. SID: {sid}")
+
+    if sid not in user_sockets:
+        print(f"Socket ID {sid} not found in active sessions. Possible early disconnect.")
+        return
+
+    session_token = user_sockets.pop(sid, None)
+
+    if not session_token or session_token not in sessions:
+        print(f"Session token {session_token} not found or invalid.")
+        return
+
+    user_data = sessions.get(session_token, {})
+    username = user_data.get("username")
+    room_code = user_data.get("room_code")
+
+    if not username or not room_code:
+        print("Invalid user data found, skipping cleanup.")
+        return   
+                
+    # if session_token in disconnect_timers:
+    #     disconnect_timers[session_token].cancel()
+    #     del disconnect_timers[session_token]
+
+    # Start a timer for delayed removal
+    # disconnect_timers[session_token] = threading.Timer(0, delayed_removal)
+    # disconnect_timers[session_token].start()
+
+    start_thread(session_token, username, room_code)
+    # time.sleep(3)  # Let the thread run for a few seconds
+    
+
+    print(f"User {username} disconnected. Waiting 3 minutes before removal.")
 
 if __name__ == '__main__':
-    socketio.run(app,host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
 
-# Remove the comment from the line below to run the app in production m
-    #socketio.run(app, debug=True)
 
+# TODO
+# If a player refresh it still gets disconnected after the set timer

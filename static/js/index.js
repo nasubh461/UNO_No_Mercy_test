@@ -20,12 +20,12 @@ document.getElementById('create-room-submit').addEventListener('click', function
         fetch('/create_room', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: playerName }) // Send player name
+            body: JSON.stringify({ username: playerName })
         })
         .then(response => response.json())
         .then(data => {
-            let roomCode = data.room_code;
-            window.location.href = `/room/${roomCode}?player=${encodeURIComponent(playerName)}`; // Pass player name as query param
+            localStorage.setItem('session_token', data.session_token);
+            window.location.href = `/room/${data.room_code}`;
         })
         .catch(error => console.error('Error creating room:', error));
     }
@@ -44,8 +44,10 @@ document.getElementById('join-room-submit').addEventListener('click', function()
         .then(response => response.json())
         .then(data => {
             if (data.status === 'joined') {
-                localStorage.setItem('player_name', playerName);
-                window.location.href = "/room/" + roomCode;  // Redirect to room
+                localStorage.setItem('session_token', data.session_token);
+                window.location.href = `/room/${roomCode}`;
+            } else if (data.status === 'duplicate') {
+                alert("Username already exists in the room. Please choose another name.");
             } else {
                 alert("Room not found.");
             }
@@ -64,4 +66,4 @@ window.onclick = function(event) {
     if (event.target == joinModal) {
         joinModal.style.display = 'none';
     }
-}
+};
