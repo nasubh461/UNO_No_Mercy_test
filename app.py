@@ -5,9 +5,11 @@ import string
 import secrets
 import threading
 import time
+from flask_cors import CORS
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 rooms = {} # {'ROOMID' : ['playername1','playername1']}
 sessions = {} # {'7c40fd705e1511751f6fbf5dd94936c7': {'username': 'player1', 'room_code': 'ANOLXK'}}
@@ -36,7 +38,6 @@ def stop_thread(token):
         print(f"Thread {token} not found")
 
 def delayed_removal(token, stop_event, username, room_code):
-    """Remove user from session and room after 3 minutes if they don't reconnect."""
     print(f"Thread {token} started")
     for _ in range(30):  # Check every second for 30 seconds
         if stop_event.is_set():
@@ -47,15 +48,16 @@ def delayed_removal(token, stop_event, username, room_code):
     # Check again before deleting
     if room_code in rooms and username in rooms[room_code]:
         rooms[room_code].remove(username)
-        if not rooms[room_code]:  # Remove empty room
+
+        if not rooms[room_code]:
             del rooms[room_code]
 
     if token in sessions:
         del sessions[token]
 
-    print(f"User {username} permanently removed after 3 minutes of inactivity.")
+    print(f"User {username} permanently removed after 30 sec of inactivity.")
     print(rooms)
-    if room_code in rooms: # Remove empty room                                 
+    if room_code in rooms:                                
         socketio.emit("update_players", {"players": rooms.get(room_code, [])}, room=room_code)
     print(f"Thread {token} stopped")
 
@@ -88,7 +90,7 @@ def join_room_route():
 
     if room_code in rooms:
         if username in rooms[room_code]:  
-            return jsonify({'status': 'duplicate'})  # Prevent duplicate usernames
+            return jsonify({'status': 'duplicate'})
         
         session_token = generate_session_token()
         rooms[room_code].append(username)
@@ -118,14 +120,11 @@ def get_username():
 
 @socketio.on("join_room")
 def handle_join_room(data):
-    """Handle joining a room, check if the user is rejoining and cancel removal."""
     room_code = data.get("room")
     username = data.get("username")
     session_token = data.get("session")
 
     print(session_token)
-    # if session_token in sessions:
-    #     all_session_tokens = list(user_sockets.values())
     print(user_sockets)
     print(sessions)
     print(rooms)       
@@ -134,9 +133,8 @@ def handle_join_room(data):
         rooms[room_code].append(username)
 
     if session_token in disconnect_timers:
-        # Cancel the delayed removal timer if user re-joins within 3 minutes
         stop_thread(session_token)
-        print(f"User {username} rejoined within 3 minutes. Canceling removal.")
+        print(f"User {username} rejoined within 30 sec. Canceling removal.")
 
     sessions[session_token] = {'username': username, 'room_code': room_code}
     user_sockets[request.sid] = session_token
@@ -156,10 +154,6 @@ def handle_join_room(data):
                 index_to_del = i
                 token_to_delete = list(user_sockets.keys())[index_to_del]       
                 del user_sockets[token_to_delete]       
-
-
-    
-
     join_room(room_code)
 
     print(user_sockets)
@@ -215,24 +209,10 @@ def handle_disconnect():
     if not username or not room_code:
         print("Invalid user data found, skipping cleanup.")
         return   
-                
-    # if session_token in disconnect_timers:
-    #     disconnect_timers[session_token].cancel()
-    #     del disconnect_timers[session_token]
-
-    # Start a timer for delayed removal
-    # disconnect_timers[session_token] = threading.Timer(0, delayed_removal)
-    # disconnect_timers[session_token].start()
 
     start_thread(session_token, username, room_code)
-    # time.sleep(3)  # Let the thread run for a few seconds
-    
 
-    print(f"User {username} disconnected. Waiting 3 minutes before removal.")
+    print(f"User {username} disconnected. Waiting 30 sec before removal.")
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
-
-
-# TODO
-# If a player refresh it still gets disconnected after the set timer
+    socketio.run(app, host='0.0.0.0', port=5000)

@@ -1,52 +1,31 @@
 import random
+from cards import deck  # Assuming deck is a list of UNO cards
 
-class UnoGame:
-    def __init__(self):
-        self.players = []
-        self.deck = []
-        self.game_state = {
-            'current_turn': 0,
-            'direction': 1,  # 1 for clockwise, -1 for counter-clockwise
-            'game_over': False
-        }
-        self.init_deck()
-
-    def init_deck(self):
-        colors = ['red', 'green', 'blue', 'yellow']
-        values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'draw2']
-        self.deck = [f'{color}_{value}.png' for color in colors for value in values]
-
-        random.shuffle(self.deck)
-
-    def deal_cards(self, num_cards=7):
-        hands = {player: [] for player in self.players}
-        for _ in range(num_cards):
-            for player in self.players:
-                hands[player].append(self.deck.pop())
-
-        return hands
-
-    def play_card(self, player, card):
-        # Implement the rules for playing a card (e.g., matching color, value, etc.)
-        pass
-
-    def draw_card(self, player):
-        # Draw a card from the deck and return it
-        if self.deck:
-            return self.deck.pop()
-        else:
-            self.game_state['game_over'] = True  # If the deck is empty, end the game
-            return None
-
-    def next_turn(self):
-        self.game_state['current_turn'] = (self.game_state['current_turn'] + self.game_state['direction']) % len(self.players)
-
-    def get_current_player(self):
-        return self.players[self.game_state['current_turn']]
-
-    def check_winner(self):
-        # Check if any player has won
+class Unogame:
+    def __init__(self, num_players, *player_names):
+        if len(player_names) != num_players:
+            raise ValueError("Number of players must match the number of names provided.")
+        
+        self.players = list(player_names)
+        self.hands = {player: [] for player in self.players}
+        self.distribute_cards()
+    
+    def distribute_cards(self):
+        if len(deck) < 7 * len(self.players):
+            raise ValueError("Not enough cards in the deck to distribute.")
+        
         for player in self.players:
-            if len(player['hand']) == 0:
-                return player
-        return None
+            self.hands[player] = random.sample(deck, 7)
+    
+    def get_players(self):
+        return self.players
+    
+    def get_player_hand(self, player):
+        if player not in self.hands:
+            raise ValueError("Player not found.")
+        return self.hands[player]
+    
+# Example Usage
+# game = Unogame(3, "Alice", "Bob", "Charlie")
+# print(game.get_players())
+# print(game.get_player_hand("Alice"))
