@@ -26,6 +26,6 @@ class Unogame:
         return self.hands[player]
     
 # Example Usage
-# game = Unogame(3, "Alice", "Bob", "Charlie")
-# print(game.get_players())
-# print(game.get_player_hand("Alice"))
+game = Unogame(3, "Alice", "Bob", "Charlie")
+print(game.get_players())
+print(game.get_player_hand("Alice"))
