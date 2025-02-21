@@ -57,6 +57,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("Your Hand:", data.hand);
             });
 
+            socket.on("room_deleted", function (data) {
+                alert(data.message);  // Notify the user that the game ended
+                // window.location.href = "main.html";  // Redirect to home page
+                window.location.href = "/";
+            });
+            
+
             leaveButton.addEventListener("click", function () {
                 socket.emit("leave_room", { room: roomCode, username: username, session: sessionToken });
                 localStorage.removeItem("session_token");

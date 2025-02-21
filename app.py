@@ -203,6 +203,18 @@ def handle_leave_room(data):
     username = data.get("username")
     session_token = data.get("session")
 
+    if room_code in rooms:
+        # If the game has started, delete the entire room and all sessions
+        if rooms[room_code]['started']:
+            print(f"Game in {room_code} was active, deleting room and clearing all players' sessions.")
+            for player in rooms[room_code]['players']:
+                for token, session_data in list(sessions.items()):
+                    if session_data["username"] == player:
+                        del sessions[token]  # Remove all player sessions
+            del rooms[room_code]  # Delete the room
+            emit("room_deleted", {"message": "Game ended as a player left"}, room=room_code)
+            return  # Exit function early since room is deleted
+
     if room_code in rooms and username in rooms[room_code]['players']:
         rooms[room_code]['players'].remove(username)
 
@@ -261,4 +273,4 @@ def handle_disconnect():
     print(f"User {username} disconnected. Waiting 30 sec before removal.")
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
