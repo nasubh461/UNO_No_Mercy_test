@@ -3,23 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stacked Cards</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>UNO No Mercy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 </head>
 <body>
-    <div class="draw-deck-container">
-        <div class="draw-deck">
-            {% for card in draw_deck %}
-                <div class="dcard" style="--i: {{ loop.index0 }};">{{ card['color'] }} {{ card['type'] }}</div>
-            {% endfor %}
+    <div class="container">
+        <h1>UNO No Mercy</h1>
+        <p>Welcome to the ultimate UNO experience! Gather your friends and get ready for a game where there are no rules, just fun!</p>
+        <div class="button-container">
+            <button id="createRoom" class="button">Create Room</button>
+            <button id="joinRoom" class="button">Join Room</button>
         </div>
     </div>
-    <button class="action-button">Draw</button>
-    <div class="card-container">
-        {% for i in range(num_cards) %}
-            <div class="card" style="--i: {{ i }};">Card {{ i+1 }}</div>
-        {% endfor %}
-    </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
