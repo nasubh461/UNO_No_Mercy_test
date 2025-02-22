@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UNO No Mercy</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>UNO No Mercy</h1>
-        <p>Welcome to the ultimate UNO experience! Gather your friends and get ready for a game where there are no rules, just fun!</p>
-        <div class="button-container">
-            <button id="createRoom" class="button">Create Room</button>
-            <button id="joinRoom" class="button">Join Room</button>
-        </div>
+
+    <div class="banner">
+            <h1 id="main-title">Welcome to UNO no Mercy</h1>
+            <p id="catch-line">Play UNO with your friends online!</p>
     </div>
-    <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <div class="button-container">
+        <button id="createRoom" class="button">Create Room</button>
+        <button id="joinRoom" class="button">Join Room</button>
+    </div>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 </html>
