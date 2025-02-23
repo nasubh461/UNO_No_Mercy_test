@@ -63,9 +63,21 @@ def delayed_removal(token, stop_event, username, room_code):
         socketio.emit("update_players", {"players": rooms.get(room_code, [])}, room=room_code)
     print(f"Thread {token} stopped")
 
-    if rooms[room_code]['started'] == True:
+    if rooms[room_code]['started'] == True and room_code in rooms:
         print("Deleted Room")
         del rooms[room_code]
+
+def handle_special_effects(game, card):
+    # Implement special card logic here
+    if card['type'] == 'Reverse':
+        game.players.reverse()
+    elif card['type'] == 'Skip':
+        game.next_player()
+    elif card['type'] == 'Draw Two':
+        next_player = game.current_players_turn()
+        for _ in range(2):
+            if game.deck:
+                game.hands[next_player].append(game.deck.pop())
 
 @app.route('/')
 def index():
@@ -147,13 +159,13 @@ def start_game():
                     if player_name in player_hands:
                         socketio.emit("your_hand", {
                             "hand": player_hands[player_name],
-                            "discard_top": game.discard_pile[-1] if game.discard_pile else None,
+                            "discard_top": game.top_card() if game.discard_pile else None,
                             "cards_left": game.cards_remaining()
                         }, room=sid)
 
             socketio.emit("game_started", {
                 "cards_left": game.cards_remaining(),
-                "discard_top": game.discard_pile[-1] if game.discard_pile else None
+                "discard_top": game.top_card() if game.discard_pile else None
             }, room=room_code)
 
             return jsonify({'status': 'started'})
@@ -172,7 +184,7 @@ def handle_draw_card(data):
     player = sessions[session_token]['username']
     
     if game and game.deck:
-        drawn_card = game.draw(player)
+        drawn_card = game.draw_card(player)
         
         # Emit updates
         socketio.emit("card_drawn", {
@@ -180,6 +192,85 @@ def handle_draw_card(data):
             "new_card": drawn_card,
             "cards_left": game.cards_remaining()
         }, room=request.sid)
+
+        # Send updated hand to player
+        player_hand = game.get_player_hand(player)
+        emit("your_hand", {
+            "hand": player_hand,
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=request.sid)
+
+# Add to handle_play_card function
+@socketio.on("play_card")
+def handle_play_card(data):
+    room_code = data.get('room')
+    session_token = user_sockets.get(request.sid)
+    
+    if not session_token or room_code not in rooms:
+        return
+    
+    game = rooms[room_code].get('game')
+    player = sessions[session_token]['username']
+    index = data.get('index')
+    chosen_color = data.get('color', None)
+    
+    if not game or index is None:
+        return
+    
+    # Validate turn
+    if game.current_players_turn() != player:
+        emit("play_error", {"message": "It's not your turn!"}, room=request.sid)
+        return
+    
+    # Validate card index
+    valid_indices = game.find_valid_cards(player)
+    if int(index) not in valid_indices:
+        emit("play_error", {"message": "Invalid card selection!"}, room=request.sid)
+        return
+    
+    # Remove card from hand
+    try:
+        card = game.hands[player].pop(int(index))
+    except IndexError:
+        emit("play_error", {"message": "Invalid card index!"}, room=request.sid)
+        return
+    
+    # Handle Wild cards
+    if card['color'] == 'Wild':
+        if not chosen_color or chosen_color not in ['Red', 'Blue', 'Green', 'Yellow']:
+            emit("play_error", {"message": "Please select a valid color!"}, room=request.sid)
+            game.hands[player].append(card)  # Return card to hand
+            return
+        game.playing_color = chosen_color
+    else:
+        game.playing_color = card['color']
+    
+    # Add to discard pile
+    game.discard_pile.append(card)
+    
+    # Handle special effects
+    handle_special_effects(game, card)
+    
+    # Move to next player
+    game.next_player()
+    
+    # Broadcast game update
+    socketio.emit("game_update", {
+        "current_player": game.current_players_turn(),
+        "discard_top": game.top_card(),
+        "cards_left": game.cards_remaining()
+    }, room=room_code)
+    
+    # Send updated hand to player
+    player_hand = game.get_player_hand(player)
+    emit("your_hand", {
+        "hand": player_hand,
+        "discard_top": game.top_card(),
+        "cards_left": game.cards_remaining()
+    }, room=request.sid)
+
+
 
 @socketio.on("join_room")
 def handle_join_room(data):

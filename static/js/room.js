@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", function () {
     var leaveButton = document.getElementById("leave-room-btn");
     var startGameButton = document.getElementById("start-game-btn");
     var drawButton = document.getElementById("draw-card-btn");
+    var playButton = document.getElementById("play-card-btn");
+
+    let currentHand = [];
 
     // Retrieve username from localStorage
     var sessionToken = localStorage.getItem("session_token");
@@ -19,6 +22,10 @@ document.addEventListener("DOMContentLoaded", function () {
         socket.emit("draw_card", { room: roomCode });
     });
 
+    playButton.addEventListener("click", function() {
+        socket.emit("play_card", { room: roomCode });
+    });
+
     function updatePlayerList(players) {
         playerList.innerHTML = "";
         players.forEach((player, index) => {
@@ -30,6 +37,82 @@ document.addEventListener("DOMContentLoaded", function () {
             if (index === 0 && player === localStorage.getItem("username")) {
                 startGameButton.style.display = "block";
             }
+        });
+    }
+
+    function getCardColor(color) {
+        const colors = {
+            'Red': '#ff0000',
+            'Blue': '#0000ff',
+            'Green': '#00ff00',
+            'Yellow': '#ffff00',
+            'Wild': '#808080'
+        };
+        return colors[color] || '#ffffff';
+    }
+    
+    function updateHandDisplay() {
+        const container = document.getElementById('hand-container');
+        container.innerHTML = '';
+        currentHand.forEach((card, index) => {
+            const cardBtn = document.createElement('button');
+            cardBtn.className = 'card';
+            cardBtn.style.backgroundColor = getCardColor(card.color);
+            cardBtn.innerHTML = `
+                <div class="card-top">${card.color}</div>
+                <div class="card-center">${card.type || card.value}</div>
+            `;
+            cardBtn.dataset.index = index;
+            
+            // Add different style for wild cards
+            if (card.color === 'Wild') {
+                cardBtn.classList.add('wild-card');
+                cardBtn.style.color = 'white';
+            }
+            
+            cardBtn.addEventListener('click', () => handlePlayCard(index, card));
+            container.appendChild(cardBtn);
+        });
+    }
+
+    async function handlePlayCard(index, card) {
+        if (card.color === 'Wild') {
+            const color = await promptColor();
+            if (!color) return;
+            socket.emit('play_card', {
+                room: roomCode,
+                index: index,
+                color: color
+            });
+        } else {
+            socket.emit('play_card', {
+                room: roomCode,
+                index: index
+            });
+        }
+    }
+    
+    function promptColor() {
+        return new Promise(resolve => {
+            const colorPicker = document.createElement('div');
+            colorPicker.innerHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px;">
+                    <p>Choose a color:</p>
+                    <button style="background: red; padding: 10px;" data-color="Red"></button>
+                    <button style="background: blue; padding: 10px;" data-color="Blue"></button>
+                    <button style="background: green; padding: 10px;" data-color="Green"></button>
+                    <button style="background: yellow; padding: 10px;" data-color="Yellow"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(colorPicker);
+            
+            colorPicker.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.body.removeChild(colorPicker);
+                    resolve(e.target.dataset.color);
+                });
+            });
         });
     }
 
@@ -52,7 +135,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 updatePlayerList(data.players);
             });
 
-            socket.on("game_started", function () {
+            socket.on("game_started", function (data) {
                 console.log("=== GAME STARTED ===");
                 console.log("Initial Discard:", data.discard_top);
                 console.log("Cards Remaining:", data.cards_left);
@@ -69,6 +152,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("Discard Pile Top:", data.discard_top);
                 console.log("Cards Left in Deck:", data.cards_left);
                 console.log("==================");
+
+                currentHand = data.hand;
+                updateHandDisplay();
+                
+                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+            });
+
+            // Add new event listener for game state updates
+            socket.on("game_update", function(data) {
+                document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
+                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+            });
+
+            socket.on("play_error", function(data) {
+                alert(data.message);
             });
 
             socket.on("card_drawn", function (data) {
@@ -77,6 +175,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("New Card:", data.new_card);
                 console.log("Remaining Cards:", data.cards_left);
                 console.log("==================");
+
+                // Add new cards to current hand
+                currentHand.push(...data.new_card);
+                updateHandDisplay();
+                
+                // Enable play button if valid moves exist
+                playButton.style.display = "block";
             });
 
             socket.on("room_deleted", function (data) {
