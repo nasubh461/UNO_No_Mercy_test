@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Room</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='createRoom.css') }}"> <!-- Link to the CSS file -->
+    <link rel="stylesheet" href="static/css/createRoom.css"> <!-- Link to the CSS file -->
 </head>
 <body>
     <div class="container">
         <h1>Create Room</h1>
-        <label for="playerName">Player Name:</label>
-        <input type="text" id="playerName" name="playerName" required>
+        <input type="text" id="playerName" name="playerName" placeholder="Player Name" required>
         <button id="createRoomBtn">Create Room</button>
 
         <p id="roomCodeDisplay"></p>
     </div>
 
-    <script src="{{ url_for('static', filename='index.js') }}"></script> <!-- Link to the JavaScript file -->
+    <script src="/static/js/createRoom.js"></script> <!-- Link to the JavaScript file -->
 </body>
 </html>
