@@ -1,31 +1,55 @@
+from cards import deck as original_deck
 import random
-from cards import deck  # Assuming deck is a list of UNO cards
 
 class Unogame:
-    def __init__(self, num_players, *player_names):
-        if len(player_names) != num_players:
-            raise ValueError("Number of players must match the number of names provided.")
-        
+    def __init__(self, *player_names):
+        self.deck = original_deck.copy()
+        random.shuffle(self.deck)
+        self.discard_pile = []
+        self.draw_stack = []
+        self.playing_color = None
+        self.roulette = False
         self.players = list(player_names)
         self.hands = {player: [] for player in self.players}
+        self._init_discard_pile()
         self.distribute_cards()
-    
+
+    def _init_discard_pile(self):
+        if self.deck:
+            temp = self.deck.pop()
+            while temp['color'] == 'Wild':
+                self.deck.append(temp)
+                random.shuffle(self.deck)
+                temp = self.deck.pop()
+            self.playing_color = temp['color']
+            self.discard_pile.append(temp)        
+
     def distribute_cards(self):
-        if len(deck) < 7 * len(self.players):
-            raise ValueError("Not enough cards in the deck to distribute.")
-        
         for player in self.players:
-            self.hands[player] = random.sample(deck, 7)
-    
-    def get_players(self):
-        return self.players
+            self.hands[player] = [self.deck.pop() for _ in range(7)]       
     
     def get_player_hand(self, player):
-        if player not in self.hands:
-            raise ValueError("Player not found.")
-        return self.hands[player]
+        return self.hands.get(player, [])
     
-# Example Usage
-# game = Unogame(3, "Alice", "Bob", "Charlie")
-# print(game.get_players())
-# print(game.get_player_hand("Alice"))
+    def cards_remaining(self):
+        return len(self.deck)
+    
+    def current_players_turn(self):
+        return self.players[0]
+    
+    def top_card(self):
+        return self.discard_pile[-1]
+    
+    def draw(self, player):
+        temp = self.deck.pop()
+        self.hands[player].append(temp)
+        return temp
+
+
+
+
+# arr = ['sam', 'smith', 'john', 'friday']    
+# game = Unogame(*arr)
+# print(game.discard_pile)
+# print(game.cards_remaining())
+# #print(game.hands)

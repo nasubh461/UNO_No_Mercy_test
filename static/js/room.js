@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var playerList = document.getElementById("player-list");
     var leaveButton = document.getElementById("leave-room-btn");
     var startGameButton = document.getElementById("start-game-btn");
+    var drawButton = document.getElementById("draw-card-btn");
 
     // Retrieve username from localStorage
     var sessionToken = localStorage.getItem("session_token");
@@ -13,6 +14,10 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "/";
         return;
     }
+
+    drawButton.addEventListener("click", function() {
+        socket.emit("draw_card", { room: roomCode });
+    });
 
     function updatePlayerList(players) {
         playerList.innerHTML = "";
@@ -48,13 +53,30 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("game_started", function () {
-                alert("Game has started! No new players can join.");
-                startGameButton.style.display = "none"; // Hide start button
+                console.log("=== GAME STARTED ===");
+                console.log("Initial Discard:", data.discard_top);
+                console.log("Cards Remaining:", data.cards_left);
+                console.log("====================");      
                 
+                drawButton.style.display = "block";
+                alert("Game has started! No new players can join.");
+                startGameButton.style.display = "none";
             });
 
             socket.on("your_hand", function (data) {
-                console.log("Your Hand:", data.hand);
+                console.log("=== YOUR HAND ===");
+                console.log("Cards:", data.hand);
+                console.log("Discard Pile Top:", data.discard_top);
+                console.log("Cards Left in Deck:", data.cards_left);
+                console.log("==================");
+            });
+
+            socket.on("card_drawn", function (data) {
+                console.log("=== CARD DRAWN ===");
+                console.log("Player:", data.player);
+                console.log("New Card:", data.new_card);
+                console.log("Remaining Cards:", data.cards_left);
+                console.log("==================");
             });
 
             socket.on("room_deleted", function (data) {
