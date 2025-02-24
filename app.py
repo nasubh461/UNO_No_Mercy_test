@@ -397,6 +397,7 @@ def handle_disconnect():
         if rooms[room_code]['players'][0] == username and rooms[room_code]['started'] == False:
             print("Room leader left, so deleting room")
             del rooms[room_code]
+            del sessions[session_token]
             return
     else:
         del sessions[session_token]
@@ -406,6 +407,24 @@ def handle_disconnect():
     start_thread(session_token, username, room_code)
 
     print(f"User {username} disconnected. Waiting 30 sec before removal.")
+
+@app.route('/debug')
+def debug():
+    debug_rooms = {}
+    for room_code, room_data in rooms.items():
+        # Create a copy to avoid modifying the original data
+        room_info = room_data.copy()
+        if room_info['game'] is not None:
+            # Convert the game object to a dictionary
+            room_info['game'] = room_info['game'].to_dict()
+        debug_rooms[room_code] = room_info
+
+    return jsonify({
+        "rooms": debug_rooms,
+        "sessions": sessions,
+        "user_sockets": user_sockets,
+        "disconnect_timers": disconnect_timers
+    })
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)

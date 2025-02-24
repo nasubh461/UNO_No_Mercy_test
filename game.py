@@ -14,6 +14,7 @@ class Unogame:
         self.hands = {player: [] for player in self.players}
         self._init_discard_pile()
         self.distribute_cards()
+        self.awaiting_color_choice = False
 
     def _init_discard_pile(self):
         if self.deck:
@@ -124,6 +125,18 @@ class Unogame:
 
     def play_card(self, player):
         pass
+
+    def to_dict(self):
+        return {
+            "players": self.players,
+            "current_player": self.current_players_turn(),
+            "deck": self.deck,  # Assuming deck is a list of serializable cards
+            "discard_pile": self.discard_pile,
+            "hands": {player: hand for player, hand in self.hands.items()},
+            "playing_color": self.playing_color,
+            "roulette": self.roulette,
+            "stacked_cards":self.stacked_cards
+        }
 
 
 

@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var leaveButton = document.getElementById("leave-room-btn");
     var startGameButton = document.getElementById("start-game-btn");
     var drawButton = document.getElementById("draw-card-btn");
-    var playButton = document.getElementById("play-card-btn");
+
 
     let currentHand = [];
 
@@ -20,10 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     drawButton.addEventListener("click", function() {
         socket.emit("draw_card", { room: roomCode });
-    });
-
-    playButton.addEventListener("click", function() {
-        socket.emit("play_card", { room: roomCode });
     });
 
     function updatePlayerList(players) {
