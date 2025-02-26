@@ -428,3 +428,6 @@ def debug():
 
 if __name__ == '__main__':
     socketio.run(app, host='10.0.0.210', port=5000, debug=True, allow_unsafe_werkzeug=True)
+
+
+#CHECK GITHUB WORKFLOW
