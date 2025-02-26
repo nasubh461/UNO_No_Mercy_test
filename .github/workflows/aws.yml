@@ -20,7 +20,7 @@ jobs:
 
       - name: Deploy and Cleanup Docker on AWS
         run: |
-          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@13.126.117.44 <<EOF
+          ssh -o StrictHostKeyChecking=no -i private_key ubuntu@65.0.127.14 <<EOF
             # Install Docker if not installed
             if ! command -v docker &> /dev/null; then
               sudo apt update
