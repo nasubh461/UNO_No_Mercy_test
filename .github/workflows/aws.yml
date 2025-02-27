@@ -42,5 +42,5 @@ jobs:
 
             # Build and run new Docker container
             docker build -t uno .
-            docker run -d --name uno-container -p 5000:5000 uno
+            docker run -d --name uno-container -p 8000:8000 uno
           EOF
