@@ -41,31 +41,44 @@ def stop_thread(token):
 
 def delayed_removal(token, stop_event, username, room_code):
     print(f"Thread {token} started")
-    for _ in range(30):  # Check every second for 30 seconds
+
+    # Starting a 30s timer
+    for _ in range(30):
         if stop_event.is_set():
             print(f"User {username} with session token {token} rejoined, skipping removal.")
             return
         time.sleep(1)
-        
-    # Check again before deleting
-    if room_code in rooms and username in rooms[room_code]['players']:
-        rooms[room_code]['players'].remove(username)
 
-        if not rooms[room_code]['players']:
-            del rooms[room_code]
+    with app.app_context():    
+        # Checking if room and username exists before removing
+        if room_code in rooms and username in rooms[room_code]['players']:
+            # Remove the disconnected player
+            rooms[room_code]['players'].remove(username)
 
-    if token in sessions:
-        del sessions[token]
+            # Case 1: Room is now empty
+            if not rooms[room_code]['players']:
+                print(f"Room {room_code} empty. Deleting and notifying.")
+                socketio.emit("room_deleted", {"message": "Game ended as all players left"}, room=room_code)
+                del rooms[room_code]
+            else:
+                # Case 2: Game started and only one player remains
+                if rooms[room_code]['started'] and len(rooms[room_code]['players']) == 1:
+                    print(f"Single player left in started game. Deleting room {room_code}.")
+                    socketio.emit("room_deleted", {"message": "Game ended as players left"}, room=room_code)
+                    del rooms[room_code]
 
-    print(f"User {username} with  permanently removed after 30 sec of inactivity.")
+        # Cleanup session and timers
+        if token in sessions:
+            del sessions[token]
+        if token in disconnect_timers:
+            del disconnect_timers[token]
 
-    if room_code in rooms:                                
-        socketio.emit("update_players", {"players": rooms.get(room_code, [])}, room=room_code)
-    print(f"Thread {token} stopped")
+        print(f"User {username} with  permanently removed after 30 sec of inactivity.")            
 
-    if rooms[room_code]['started'] == True and room_code in rooms:
-        print("Deleted Room")
-        del rooms[room_code]
+        if room_code in rooms:                                
+            socketio.emit("update_players", {"players": rooms[room_code]['players']}, room=room_code)
+
+        print(f"Thread {token} stopped")
 
 def handle_special_effects(game, card):
     # Implement special card logic here
@@ -82,7 +95,6 @@ def handle_special_effects(game, card):
 @app.route('/')
 def index():
     return render_template('main.html')
-
 
 @app.route('/create_room', methods=['POST'])
 def create_room():
@@ -168,6 +180,13 @@ def start_game():
                 "discard_top": game.top_card() if game.discard_pile else None
             }, room=room_code)
 
+            # Broadcast game update
+            socketio.emit("game_update", {
+                "current_player": game.current_players_turn(),
+                "discard_top": game.top_card(),
+                "cards_left": game.cards_remaining()
+            }, room=room_code)
+
             return jsonify({'status': 'started'})
         return jsonify({'status': 'not_enough_players'})
     return jsonify({'status': 'unauthorized'})
@@ -200,6 +219,13 @@ def handle_draw_card(data):
             "discard_top": game.top_card(),
             "cards_left": game.cards_remaining()
         }, room=request.sid)
+
+        # Broadcast game update
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=room_code)
 
 # Add to handle_play_card function
 @socketio.on("play_card")
@@ -270,8 +296,6 @@ def handle_play_card(data):
         "cards_left": game.cards_remaining()
     }, room=request.sid)
 
-
-
 @socketio.on("join_room")
 def handle_join_room(data):
     room_code = data.get("room")
@@ -310,6 +334,28 @@ def handle_join_room(data):
 
     join_room(room_code)
 
+    if rooms[room_code]['started'] == True:
+
+        room_code = data.get('room')
+        session_token = user_sockets.get(request.sid)
+
+        game = rooms[room_code].get('game')
+        player = sessions[session_token]['username']
+
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=room_code)
+        
+        # Send updated hand to player
+        player_hand = game.get_player_hand(player)
+        emit("your_hand", {
+            "hand": player_hand,
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=request.sid)
+
     print(user_sockets)
     print(sessions)
     print(rooms)
@@ -344,9 +390,10 @@ def handle_leave_room(data):
 
             for sid in sids_to_delete:
                 user_sockets.pop(sid, None)
-
-            del rooms[room_code]  # Delete the room
+            
             emit("room_deleted", {"message": "Game ended as a player left"}, room=room_code)
+            del rooms[room_code]  # Delete the room
+            
             return  # Exit function early since room is deleted
 
     if room_code in rooms and username in rooms[room_code]['players']:
@@ -357,6 +404,7 @@ def handle_leave_room(data):
 
         # If room is empty, delete it
         if not rooms[room_code]['players']:  
+            
             del rooms[room_code]
 
     leave_room(room_code)
@@ -396,6 +444,7 @@ def handle_disconnect():
     if room_code in rooms:
         if rooms[room_code]['players'][0] == username and rooms[room_code]['started'] == False:
             print("Room leader left, so deleting room")
+            emit("room_deleted", {"message": "Game ended as a player left"}, room=room_code)
             del rooms[room_code]
             del sessions[session_token]
             return
@@ -419,11 +468,18 @@ def debug():
             room_info['game'] = room_info['game'].to_dict()
         debug_rooms[room_code] = room_info
 
+    disconnect_timers_info = {}
+    for token, (thread, event) in disconnect_timers.items():
+        disconnect_timers_info[token] = {
+            "thread_alive": thread.is_alive(),
+            "event_set": event.is_set()
+        }
+
     return jsonify({
         "rooms": debug_rooms,
         "sessions": sessions,
         "user_sockets": user_sockets,
-        "disconnect_timers": disconnect_timers
+        "disconnect_timers": disconnect_timers_info
     })
 
 if __name__ == '__main__':

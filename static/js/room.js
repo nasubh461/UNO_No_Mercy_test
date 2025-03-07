@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", function () {
             socket.on("update_players", function (data) {
                 updatePlayerList(data.players);
             });
-
+            
             socket.on("game_started", function (data) {
                 console.log("=== GAME STARTED ===");
                 console.log("Initial Discard:", data.discard_top);
@@ -181,8 +181,8 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("room_deleted", function (data) {
-                alert(data.message);  // Notify the user that the game ended
-                // window.location.href = "main.html";  // Redirect to home page
+                console.log("Room deleted event received:", data);
+                alert(data.message);
                 window.location.href = "/";
             });
             
