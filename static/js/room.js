@@ -137,7 +137,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("Cards Remaining:", data.cards_left);
                 console.log("====================");      
                 
-                drawButton.style.display = "block";
                 alert("Game has started! No new players can join.");
                 startGameButton.style.display = "none";
             });
@@ -159,6 +158,16 @@ document.addEventListener("DOMContentLoaded", function () {
             socket.on("game_update", function(data) {
                 document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+
+                // Get current user from localStorage
+                const currentUser = localStorage.getItem("username");
+                
+                // Show draw button only for current player
+                if (data.current_player === currentUser) {
+                    drawButton.style.display = "block";
+                } else {
+                    drawButton.style.display = "none";
+                }
             });
 
             socket.on("play_error", function(data) {
