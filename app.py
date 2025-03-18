@@ -176,6 +176,7 @@ def start_game():
                         }, room=sid)
 
             socketio.emit("game_started", {
+                "shuffled_players": game.players, 
                 "cards_left": game.cards_remaining(),
                 "discard_top": game.top_card() if game.discard_pile else None
             }, room=room_code)
@@ -190,6 +191,31 @@ def start_game():
             return jsonify({'status': 'started'})
         return jsonify({'status': 'not_enough_players'})
     return jsonify({'status': 'unauthorized'})
+
+@app.route('/debug')
+def debug():
+    debug_rooms = {}
+    for room_code, room_data in rooms.items():
+        # Create a copy to avoid modifying the original data
+        room_info = room_data.copy()
+        if room_info['game'] is not None:
+            # Convert the game object to a dictionary
+            room_info['game'] = room_info['game'].to_dict()
+        debug_rooms[room_code] = room_info
+
+    disconnect_timers_info = {}
+    for token, (thread, event) in disconnect_timers.items():
+        disconnect_timers_info[token] = {
+            "thread_alive": thread.is_alive(),
+            "event_set": event.is_set()
+        }
+
+    return jsonify({
+        "rooms": debug_rooms,
+        "sessions": sessions,
+        "user_sockets": user_sockets,
+        "disconnect_timers": disconnect_timers_info
+    })
 
 @socketio.on("draw_card")
 def handle_draw_card(data):
@@ -456,31 +482,6 @@ def handle_disconnect():
     start_thread(session_token, username, room_code)
 
     print(f"User {username} disconnected. Waiting 30 sec before removal.")
-
-@app.route('/debug')
-def debug():
-    debug_rooms = {}
-    for room_code, room_data in rooms.items():
-        # Create a copy to avoid modifying the original data
-        room_info = room_data.copy()
-        if room_info['game'] is not None:
-            # Convert the game object to a dictionary
-            room_info['game'] = room_info['game'].to_dict()
-        debug_rooms[room_code] = room_info
-
-    disconnect_timers_info = {}
-    for token, (thread, event) in disconnect_timers.items():
-        disconnect_timers_info[token] = {
-            "thread_alive": thread.is_alive(),
-            "event_set": event.is_set()
-        }
-
-    return jsonify({
-        "rooms": debug_rooms,
-        "sessions": sessions,
-        "user_sockets": user_sockets,
-        "disconnect_timers": disconnect_timers_info
-    })
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8000, debug=True, allow_unsafe_werkzeug=True)

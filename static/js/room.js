@@ -138,6 +138,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("====================");      
                 
                 alert("Game has started! No new players can join.");
+                updatePlayerList(data.shuffled_players);
                 startGameButton.style.display = "none";
             });
 
