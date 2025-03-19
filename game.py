@@ -75,6 +75,15 @@ class Unogame:
     def next_player(self):
         self.players.append(self.players.pop(0))
 
+    def reverse_player(self):
+        if len(self.players) >= 3:
+            self.players = [self.players[0]] + self.players[:0:-1] 
+        else:
+            self.players.reverse()
+
+    def skip_all(self):
+        self.players.insert(0, self.players.pop(-1))
+
     def find_valid_cards(self, player):
         valid_indices = []
         top_card = self.discard_pile[-1]
@@ -128,8 +137,8 @@ class Unogame:
                 valid_color_indexes.append(i)
         return valid_color_indexes
 
-    def play_card(self, player):
-        pass
+    # def play_card(self, player):
+    #     pass
 
     def to_dict(self):
         return {

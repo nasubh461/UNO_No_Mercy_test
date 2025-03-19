@@ -80,17 +80,37 @@ def delayed_removal(token, stop_event, username, room_code):
 
         print(f"Thread {token} stopped")
 
-def handle_special_effects(game, card):
+def handle_special_effects(game, card, player, color):
     # Implement special card logic here
     if card['type'] == 'Reverse':
-        game.players.reverse()
+        game.reverse_player()
     elif card['type'] == 'Skip':
         game.next_player()
     elif card['type'] == 'Draw Two':
-        next_player = game.current_players_turn()
-        for _ in range(2):
-            if game.deck:
-                game.hands[next_player].append(game.deck.pop())
+        game.stacked_cards += 2
+    elif card['type'] == 'Draw Four':
+        game.stacked_cards += 4
+    elif card['type'] == 'Draw Six':
+        game.stacked_cards += 6
+    elif card['type'] == 'Draw Ten':
+        game.stacked_cards += 10
+    elif card['type'] == 'Reverse Draw Four':
+        game.stacked_cards += 4
+        game.reverse_player()
+    elif card['type'] == 'Discard All of Color':
+        valid_color_index = game.find_valid_color_index(player, color)
+        print("Disacrd all color indexes", valid_color_index)
+        temp_card = game.discard_pile.pop()
+        while len(valid_color_index) != 0:
+            card = game.hands[player].pop(int(valid_color_index[0]))
+            game.discard_pile.append(card)
+            valid_color_index = game.find_valid_color_index(player, color)
+            print("Disacrd all color indexes 2", valid_color_index)
+        game.discard_pile.append(temp_card)
+        game.playing_color = temp_card['color']          
+    elif card['type'] == 'Skip All':
+        game.skip_all()
+    
 
 @app.route('/')
 def index():
@@ -319,7 +339,7 @@ def handle_play_card(data):
         game.discard_pile.append(card)
         
         # Handle special effects
-        handle_special_effects(game, card)
+        handle_special_effects(game, card, player, game.playing_color)
         
         # Move to next player
         game.next_player()
@@ -532,3 +552,10 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8000, debug=True, allow_unsafe_werkzeug=True)
+
+
+# Todo:
+# Implement 0 and 7 rule
+# implement stacked draw cards
+# When a player has no card in hand remove player from room. If only one player left in room delete room
+# If a plyer has mopre then 25 cards remove player from game. If only one player left in game delete room
