@@ -288,6 +288,11 @@ def handle_play_card(data):
         emit("play_error", {"message": "Invalid card index!"}, room=request.sid)
         return
     
+    if card['color'] == 'Wild' and card['type'] == 'Color Roulette':
+        game.roulette = True
+        game.awaiting_color_choice = True
+        game.playing_color = None
+    
     # Handle Wild cards
     if card['color'] == 'Wild':
         if not chosen_color or chosen_color not in ['Red', 'Blue', 'Green', 'Yellow']:
