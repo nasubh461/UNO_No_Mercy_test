@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function handlePlayCard(index, card) {
-        if (card.color === 'Wild') {
+        if (card.color === 'Wild' && card.type !== 'Color Roulette') {
             const color = await promptColor();
             if (!color) return;
             socket.emit('play_card', {
@@ -175,6 +175,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 alert(data.message);
             });
 
+            socket.on("roulette", async function() {
+                console.log("=== SPIN ROULETTE ===");
+                try {
+                    const color = await promptColor();
+                    socket.emit("color_selected", { 
+                        room: roomCode,
+                        color: color
+                    });
+                } catch (error) {
+                    console.error("Color selection failed:", error);
+                }
+            });
+
             socket.on("card_drawn", function (data) {
                 console.log("=== CARD DRAWN ===");
                 console.log("Player:", data.player);
@@ -183,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("==================");
 
                 // Add new cards to current hand
-                currentHand.push(...data.new_card);
+                currentHand.push(data.new_card);
                 updateHandDisplay();
                 
                 // Enable play button if valid moves exist
@@ -196,6 +209,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 window.location.href = "/";
             });
             
+            socket.on("roulette_draw", function (data) {
+                console.log("Roulette Card Drawn")
+                console.log(data.card_drawn)
+
+            });
+
+            socket.on("roulette_end", function () {
+                alert("Roulette ended choosen color found")
+            });
 
             leaveButton.addEventListener("click", function () {
                 socket.emit("leave_room", { room: roomCode, username: username, session: sessionToken });

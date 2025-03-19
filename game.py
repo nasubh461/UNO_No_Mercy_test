@@ -43,29 +43,34 @@ class Unogame:
         return self.discard_pile[-1]
     
     def draw_card(self, player):
-        cards = []
-        if self.roulette == False and self.stacked_cards == 0:
-            card = self.deck.pop()
-            cards.append(card)
-            self.hands[player].append(card)
-            return cards
+        card = self.deck.pop()
+        self.hands[player].append(card)            
+        return card
+    
+    # def draw_card(self, player):
+    #     cards = []
+    #     if self.roulette == False and self.stacked_cards == 0:
+    #         card = self.deck.pop()
+    #         cards.append(card)
+    #         self.hands[player].append(card)
+    #         return cards
 
-        elif self.stacked_cards != 0:
-            for i in range(self.stacked_cards):
-                card = self.deck.pop()
-                cards.append(card)
-                self.hands[player].append(card)
-            return cards
+    #     elif self.stacked_cards != 0:
+    #         for i in range(self.stacked_cards):
+    #             card = self.deck.pop()
+    #             cards.append(card)
+    #             self.hands[player].append(card)
+    #         return cards
 
-        elif self.roulette == True:
-            card = self.deck.pop()
-            cards.append(card)
-            self.hands[player].append(card)
-            while card['color'] != self.playing_color:
-                card = self.deck.pop()
-                cards.append(card)
-                self.hands[player].append(card)
-            return cards
+    #     elif self.roulette == True:
+    #         card = self.deck.pop()
+    #         cards.append(card)
+    #         self.hands[player].append(card)
+    #         while card['color'] != self.playing_color:
+    #             card = self.deck.pop()
+    #             cards.append(card)
+    #             self.hands[player].append(card)
+    #         return cards
 
     def next_player(self):
         self.players.append(self.players.pop(0))
@@ -137,11 +142,3 @@ class Unogame:
             "roulette": self.roulette,
             "stacked_cards":self.stacked_cards
         }
-
-
-
-# arr = ['smith', 'john', 'friday', 'sam']    
-# game = Unogame(*arr)
-# print(game.discard_pile)
-# print(game.cards_remaining())
-# #print(game.hands)

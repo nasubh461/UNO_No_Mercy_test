@@ -226,11 +226,19 @@ def handle_draw_card(data):
         return
     
     game = rooms[room_code].get('game')
-    player = sessions[session_token]['username']
-    
+    player = sessions[session_token]['username'] 
+
     if game and game.deck:
         drawn_card = game.draw_card(player)
-        
+
+        if game.roulette == True:
+            socketio.emit("roulette_draw", {'card_drawn' : drawn_card}, room=room_code)
+            if drawn_card['color'] == game.playing_color:
+                game.roulette = False
+                socketio.emit("roulette_end", {}, room=request.sid)
+                game.next_player()
+
+
         # Emit updates
         socketio.emit("card_drawn", {
             "player": player,
@@ -253,6 +261,7 @@ def handle_draw_card(data):
             "cards_left": game.cards_remaining()
         }, room=room_code)
 
+
 # Add to handle_play_card function
 @socketio.on("play_card")
 def handle_play_card(data):
@@ -270,62 +279,95 @@ def handle_play_card(data):
     if not game or index is None:
         return
     
-    # Validate turn
-    if game.current_players_turn() != player:
-        emit("play_error", {"message": "It's not your turn!"}, room=request.sid)
-        return
+    if game.roulette == False:
     
-    # Validate card index
-    valid_indices = game.find_valid_cards(player)
-    if int(index) not in valid_indices:
-        emit("play_error", {"message": "Invalid card selection!"}, room=request.sid)
-        return
-    
-    # Remove card from hand
-    try:
-        card = game.hands[player].pop(int(index))
-    except IndexError:
-        emit("play_error", {"message": "Invalid card index!"}, room=request.sid)
-        return
-    
-    if card['color'] == 'Wild' and card['type'] == 'Color Roulette':
-        game.roulette = True
-        game.awaiting_color_choice = True
-        game.playing_color = None
-    
-    # Handle Wild cards
-    if card['color'] == 'Wild':
-        if not chosen_color or chosen_color not in ['Red', 'Blue', 'Green', 'Yellow']:
-            emit("play_error", {"message": "Please select a valid color!"}, room=request.sid)
-            game.hands[player].append(card)  # Return card to hand
+        # Validate turn
+        if game.current_players_turn() != player:
+            emit("play_error", {"message": "It's not your turn!"}, room=request.sid)
             return
-        game.playing_color = chosen_color
+        
+        # Validate card index
+        valid_indices = game.find_valid_cards(player)
+        if int(index) not in valid_indices:
+            emit("play_error", {"message": "Invalid card selection!"}, room=request.sid)
+            return
+        
+        # Remove card from hand
+        try:
+            card = game.hands[player].pop(int(index))
+        except IndexError:
+            emit("play_error", {"message": "Invalid card index!"}, room=request.sid)
+            return
+        
+        if card['color'] == 'Wild' and card['type'] == 'Color Roulette':
+            game.roulette = True
+            game.awaiting_color_choice = True
+            game.playing_color = None
+            print("Roulette mode activated")
+        
+        # Handle Wild cards
+        if card['color'] == 'Wild' and card['type'] != 'Color Roulette':
+            if not chosen_color or chosen_color not in ['Red', 'Blue', 'Green', 'Yellow']:
+                emit("play_error", {"message": "Please select a valid color!"}, room=request.sid)
+                game.hands[player].append(card)  # Return card to hand
+                return
+            game.playing_color = chosen_color
+        else:
+            game.playing_color = card['color']
+        
+        # Add to discard pile
+        game.discard_pile.append(card)
+        
+        # Handle special effects
+        handle_special_effects(game, card)
+        
+        # Move to next player
+        game.next_player()
+        
+        # Broadcast game update
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=room_code)
+        
+        # Send updated hand to player
+        player_hand = game.get_player_hand(player)
+        emit("your_hand", {
+            "hand": player_hand,
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=request.sid)
+
+        if game.roulette and game.awaiting_color_choice:
+            current_player = game.current_players_turn()
+            # Find the current player's socket
+            for sid in user_sockets:
+                token = user_sockets[sid]
+                session_data = sessions.get(token)
+                if session_data and session_data['room_code'] == room_code and session_data['username'] == current_player:
+                    emit("roulette", {}, room=sid)
+                    break
+    
     else:
-        game.playing_color = card['color']
-    
-    # Add to discard pile
-    game.discard_pile.append(card)
-    
-    # Handle special effects
-    handle_special_effects(game, card)
-    
-    # Move to next player
-    game.next_player()
-    
-    # Broadcast game update
-    socketio.emit("game_update", {
-        "current_player": game.current_players_turn(),
-        "discard_top": game.top_card(),
-        "cards_left": game.cards_remaining()
-    }, room=room_code)
-    
-    # Send updated hand to player
-    player_hand = game.get_player_hand(player)
-    emit("your_hand", {
-        "hand": player_hand,
-        "discard_top": game.top_card(),
-        "cards_left": game.cards_remaining()
-    }, room=request.sid)
+        socketio.emit("play_error", {"message": "You must draw cards until you get a card that matches the color choosen."}, room=request.sid)
+
+@socketio.on("color_selected")
+def handle_color_selected(data):
+    room_code = data.get('room')
+    color = data.get('color')
+
+    game = rooms[room_code].get('game')
+    if game and game.roulette and game.awaiting_color_choice:
+        game.awaiting_color_choice = False
+        game.playing_color = color
+
+        # Broadcast game update
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=room_code)
 
 @socketio.on("join_room")
 def handle_join_room(data):
