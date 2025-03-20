@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var leaveButton = document.getElementById("leave-room-btn");
     var startGameButton = document.getElementById("start-game-btn");
     var drawButton = document.getElementById("draw-card-btn");
+    var newGameButton = document.getElementById("new-game-btn");
 
 
     let currentHand = [];
@@ -20,6 +21,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     drawButton.addEventListener("click", function() {
         socket.emit("draw_card", { room: roomCode });
+    });
+
+    // Add click handler for new game button
+    newGameButton.addEventListener("click", function() {
+        socket.emit("leave_room", { 
+            room: roomCode, 
+            username: localStorage.getItem("username"), 
+            session: sessionToken 
+        });
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("username");
+        window.location.href = "/";
     });
 
     function updatePlayerList(players) {
@@ -175,6 +188,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 alert(data.message);
             });
 
+            socket.on("player_disqualified", function(data) {
+                alert(data.player + " is eleminated");
+            });
+
             socket.on("roulette", async function() {
                 console.log("=== SPIN ROULETTE ===");
                 try {
@@ -217,6 +234,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
             socket.on("roulette_end", function () {
                 alert("Roulette ended choosen color found")
+            });
+
+            socket.on("game_over", function (data) {
+                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+                // Hide game controls
+                drawButton.style.display = 'none';
+                leaveButton.style.display = 'none';
+                // Show new game button
+                newGameButton.style.display = 'block';
+                alert(data.winner + " has won the game!");
             });
 
             leaveButton.addEventListener("click", function () {

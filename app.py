@@ -298,7 +298,17 @@ def handle_play_card(data):
     
     if not game or index is None:
         return
-    
+    if len(game.hands[player]) >= 25:
+        if len(game.players) == 2:
+            emit("game_over", {"winner": game.players[1], "discard_top": game.top_card()}, room=room_code)
+            return
+        game.deck = game.deck + game.hands[player]
+        random.shuffle(game.deck)
+        socketio.emit("player_disqualified", {"player": player}, room=room_code)
+        game.hands[player] = []
+        game.next_player()
+        game.players.remove(player)
+        return
     if game.roulette == False:
     
         # Validate turn
@@ -316,7 +326,23 @@ def handle_play_card(data):
         try:
             card = game.hands[player].pop(int(index))
         except IndexError:
-            emit("play_error", {"message": "Invalid card index!"}, room=request.sid)
+            emit("play_error", {
+                "message": "Invalid card index!"}, room=request.sid)
+            return
+
+        if len(game.hands[player]) == 0:
+            game.discard_pile.append(card)
+            
+            # Send updated hand to player
+            player_hand = game.get_player_hand(player)
+            emit("your_hand", {
+                "hand": player_hand,
+                "discard_top": game.top_card(),
+                "cards_left": game.cards_remaining()
+            }, room=request.sid)
+
+            emit("game_over", {"winner": player, "discard_top": game.top_card()}, room=room_code)
+
             return
         
         if card['color'] == 'Wild' and card['type'] == 'Color Roulette':
@@ -557,5 +583,6 @@ if __name__ == '__main__':
 # Todo:
 # Implement 0 and 7 rule
 # implement stacked draw cards
-# When a player has no card in hand remove player from room. If only one player left in room delete room
+# When a player has no card in hand. Declare winner and delete room (winner declare is done, need to check if room is deleted)
 # If a plyer has mopre then 25 cards remove player from game. If only one player left in game delete room
+# implement poin system if last is any special card hard the situation correctly so correct point distribution. (in v2)
