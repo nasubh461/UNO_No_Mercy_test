@@ -218,8 +218,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 currentHand.push(data.new_card);
                 updateHandDisplay();
                 
-                // Enable play button if valid moves exist
-                playButton.style.display = "block";
             });
 
             socket.on("room_deleted", function (data) {
