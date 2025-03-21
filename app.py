@@ -24,9 +24,9 @@ def generate_room_code():
 def generate_session_token():
     return secrets.token_hex(16)
 
-def start_thread(token, username, room_code):
+def start_thread(token, username, room_code, game):
         stop_event = threading.Event()
-        thread = threading.Thread(target=delayed_removal, args=(token, stop_event, username, room_code))
+        thread = threading.Thread(target=delayed_removal, args=(token, stop_event, username, room_code, game))
         disconnect_timers[token] = (thread, stop_event)
         thread.start()
 
@@ -39,7 +39,7 @@ def stop_thread(token):
     else:
         print(f"Thread {token} not found")
 
-def delayed_removal(token, stop_event, username, room_code):
+def delayed_removal(token, stop_event, username, room_code, game):
     print(f"Thread {token} started")
 
     # Starting a 30s timer
@@ -73,6 +73,7 @@ def delayed_removal(token, stop_event, username, room_code):
         if token in disconnect_timers:
             del disconnect_timers[token]
 
+        game.players.remove(username)
         print(f"User {username} with  permanently removed after 30 sec of inactivity.")            
 
         if room_code in rooms:                                
@@ -650,9 +651,11 @@ def handle_disconnect():
     else:
         del sessions[session_token]
         print("Room leader left, so no room left")
-        return   
+        return 
 
-    start_thread(session_token, username, room_code)
+    game = rooms[room_code].get('game')  
+
+    start_thread(session_token, username, room_code, game)
 
     print(f"User {username} disconnected. Waiting 30 sec before removal.")
 
@@ -671,7 +674,10 @@ if __name__ == '__main__':
 # stacking draw card is drawed 1 extra -------- done(testing needed)
 # if a player is eleminated the it doesnt move to next player. right now eleminated player need some imput to continue. -- done (testing needed)
 
-# implement player list like who is after who. visual implement
+# implement player list like who is after who. visual implement (need some more ideas)
 # show stack counter.
 # show playing color
-# when a player is eliminated remove the player from the turn but not deom room. so clicking leave button colses the game.
+# if a player disconnects then let player to join using the same session token from join room page.
+
+# when a player is eliminated remove the player from the turn but not from room. so clicking leave button closes the game. -- done(need testing)
+# if a player disconnects then the player is not removed from the game.players list ---- done (need testing)

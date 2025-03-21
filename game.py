@@ -48,31 +48,6 @@ class Unogame:
         card = self.deck.pop()
         self.hands[player].append(card)            
         return card
-    
-    # def draw_card(self, player):
-    #     cards = []
-    #     if self.roulette == False and self.stacked_cards == 0:
-    #         card = self.deck.pop()
-    #         cards.append(card)
-    #         self.hands[player].append(card)
-    #         return cards
-
-    #     elif self.stacked_cards != 0:
-    #         for i in range(self.stacked_cards):
-    #             card = self.deck.pop()
-    #             cards.append(card)
-    #             self.hands[player].append(card)
-    #         return cards
-
-    #     elif self.roulette == True:
-    #         card = self.deck.pop()
-    #         cards.append(card)
-    #         self.hands[player].append(card)
-    #         while card['color'] != self.playing_color:
-    #             card = self.deck.pop()
-    #             cards.append(card)
-    #             self.hands[player].append(card)
-    #         return cards
 
     def next_player(self):
         self.players.append(self.players.pop(0))
@@ -138,9 +113,6 @@ class Unogame:
             if player_card["color"] == color:
                 valid_color_indexes.append(i)
         return valid_color_indexes
-
-    # def play_card(self, player):
-    #     pass
 
     def to_dict(self):
         return {
