@@ -93,6 +93,8 @@ class Unogame:
             for i, player_card in enumerate(player_deck):
                 if player_card["type"] == "Reverse Draw Four" or player_card["type"] == "Draw Six" or player_card["type"] == "Draw Ten":
                     valid_staking_cards.append(i)
+                elif player_card["color"] == playing_color and player_card["type"] == "Draw Four":
+                    valid_staking_cards.append(i)
         
         elif top_card["type"] == "Draw Six":
             for i, player_card in enumerate(player_deck):

@@ -35,16 +35,18 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "/";
     });
 
-    function updatePlayerList(players) {
+    function updatePlayerList(players, gameStarted) {
         playerList.innerHTML = "";
         players.forEach((player, index) => {
             let li = document.createElement("li");
             li.textContent = player;
             playerList.appendChild(li);
 
-            // Show "Start Game" button only for the first player
-            if (index === 0 && player === localStorage.getItem("username")) {
-                startGameButton.style.display = "block";
+            if (gameStarted == false) {
+                // Show "Start Game" button only for the first player
+                if (index === 0 && player === localStorage.getItem("username")) {
+                    startGameButton.style.display = "block";
+                }
             }
         });
     }
@@ -141,7 +143,7 @@ document.addEventListener("DOMContentLoaded", function () {
             socket.emit("join_room", { room: roomCode, username: username, session: sessionToken });
 
             socket.on("update_players", function (data) {
-                updatePlayerList(data.players);
+                updatePlayerList(data.players, data.game_started);
             });
             
             socket.on("game_started", function (data) {
@@ -151,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log("====================");      
                 
                 alert("Game has started! No new players can join.");
-                updatePlayerList(data.shuffled_players);
+                updatePlayerList(data.shuffled_players, true);
                 startGameButton.style.display = "none";
             });
 

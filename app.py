@@ -77,7 +77,7 @@ def delayed_removal(token, stop_event, username, room_code, game):
         print(f"User {username} with  permanently removed after 30 sec of inactivity.")            
 
         if room_code in rooms:                                
-            socketio.emit("update_players", {"players": rooms[room_code]['players']}, room=room_code)
+            socketio.emit("update_players", {"players": rooms[room_code]['players'], "game_started": rooms[room_code]['started']}, room=room_code)
 
         print(f"Thread {token} stopped")
 
@@ -85,7 +85,7 @@ def handle_special_effects(game, card, player, color, room_code):
     # Implement special card logic here
     if card['type'] == 'Reverse':
         game.reverse_player()
-        socketio.emit("update_players", {"players": game.players}, room=room_code)
+        socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
     elif card['type'] == 'Skip':
         game.next_player()
     elif card['type'] == 'Draw Two':
@@ -104,7 +104,7 @@ def handle_special_effects(game, card, player, color, room_code):
         game.stacked_cards += 4
         game.draw_pending = True
         game.reverse_player()
-        socketio.emit("update_players", {"players": game.players}, room=room_code)
+        socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
     elif card['type'] == 'Discard All of Color':
         valid_color_index = game.find_valid_color_index(player, color)
         print("Disacrd all color indexes", valid_color_index)
@@ -360,7 +360,7 @@ def handle_play_card(data):
         game.players.remove(player)
 
         socketio.emit("player_disqualified", {"player": player}, room=room_code)
-        socketio.emit("update_players", {"players": game.players}, room=room_code)
+        socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
 
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
@@ -555,7 +555,7 @@ def handle_join_room(data):
     print(user_sockets)
     print(sessions)
     print(rooms)
-    emit("update_players", {"players": rooms[room_code]['players']}, room=room_code)
+    emit("update_players", {"players": rooms[room_code]['players'], "game_started": rooms[room_code]['started']}, room=room_code)
 
 @socketio.on("leave_room")
 def handle_leave_room(data):
@@ -612,7 +612,7 @@ def handle_leave_room(data):
     print("Updated Sessions:", sessions)
     print("Updated Rooms:", rooms)    
     print(rooms)
-    emit("update_players", {"players": rooms.get(room_code, [])}, room=room_code)
+    emit("update_players", {"players": rooms.get(room_code, []), "game_started": rooms[room_code]['started']}, room=room_code)
     
 @socketio.on("connect")
 def handle_connect():
