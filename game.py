@@ -15,6 +15,8 @@ class Unogame:
         self._init_discard_pile()
         self.distribute_cards()
         self.awaiting_color_choice = False
+        self.draw_pending = False
+        self.draw_started = False
 
     def _init_discard_pile(self):
         if self.deck:

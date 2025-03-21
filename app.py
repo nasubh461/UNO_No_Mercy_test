@@ -88,14 +88,19 @@ def handle_special_effects(game, card, player, color):
         game.next_player()
     elif card['type'] == 'Draw Two':
         game.stacked_cards += 2
+        game.draw_pending = True
     elif card['type'] == 'Draw Four':
         game.stacked_cards += 4
+        game.draw_pending = True
     elif card['type'] == 'Draw Six':
         game.stacked_cards += 6
+        game.draw_pending = True
     elif card['type'] == 'Draw Ten':
         game.stacked_cards += 10
+        game.draw_pending = True
     elif card['type'] == 'Reverse Draw Four':
         game.stacked_cards += 4
+        game.draw_pending = True
         game.reverse_player()
     elif card['type'] == 'Discard All of Color':
         valid_color_index = game.find_valid_color_index(player, color)
@@ -110,7 +115,10 @@ def handle_special_effects(game, card, player, color):
         game.playing_color = temp_card['color']          
     elif card['type'] == 'Skip All':
         game.skip_all()
-    
+    elif card['type'] == '0':
+        pass
+    elif card['type'] == '7':
+        pass
 
 @app.route('/')
 def index():
@@ -249,14 +257,28 @@ def handle_draw_card(data):
     player = sessions[session_token]['username'] 
 
     if game and game.deck:
-        drawn_card = game.draw_card(player)
-
-        if game.roulette == True:
-            socketio.emit("roulette_draw", {'card_drawn' : drawn_card}, room=room_code)
-            if drawn_card['color'] == game.playing_color:
-                game.roulette = False
-                socketio.emit("roulette_end", {}, room=request.sid)
+        if game.draw_pending == True and game.draw_started == True:
+            
+            drawn_card = game.draw_card(player)
+            game.stacked_cards -= 1
+            if game.stacked_cards == 0:
+                game.draw_pending = False
+                game.draw_started = False
                 game.next_player()
+
+        if game.draw_pending == True and game.draw_started == False:
+            drawn_card = game.draw_card(player)
+            game.draw_started = True
+            game.stacked_cards -= 1
+
+        if game.draw_pending == False and game.draw_started == False:
+            drawn_card = game.draw_card(player)
+            if game.roulette == True:
+                socketio.emit("roulette_draw", {'card_drawn' : drawn_card}, room=room_code)
+                if drawn_card['color'] == game.playing_color:
+                    game.roulette = False
+                    socketio.emit("roulette_end", {}, room=request.sid)
+                    game.next_player()
 
 
         # Emit updates
@@ -298,6 +320,7 @@ def handle_play_card(data):
     
     if not game or index is None:
         return
+    
     if len(game.hands[player]) >= 25:
         if len(game.players) == 2:
             emit("game_over", {"winner": game.players[1], "discard_top": game.top_card()}, room=room_code)
@@ -309,6 +332,7 @@ def handle_play_card(data):
         game.next_player()
         game.players.remove(player)
         return
+    
     if game.roulette == False:
     
         # Validate turn
@@ -316,8 +340,16 @@ def handle_play_card(data):
             emit("play_error", {"message": "It's not your turn!"}, room=request.sid)
             return
         
-        # Validate card index
-        valid_indices = game.find_valid_cards(player)
+        if game.draw_pending == True and game.draw_started == True:
+            emit("play_error", {"message": "Draw started, Draw all the crads"}, room=request.sid)
+            return
+        
+        if game.draw_pending == True and game.draw_started == False:
+            valid_indices = game.find_staking_cards(player)        
+        
+        if game.draw_pending == False and game.draw_started == False:
+            valid_indices = game.find_valid_cards(player)
+        
         if int(index) not in valid_indices:
             emit("play_error", {"message": "Invalid card selection!"}, room=request.sid)
             return
@@ -583,6 +615,6 @@ if __name__ == '__main__':
 # Todo:
 # Implement 0 and 7 rule
 # implement stacked draw cards
-# When a player has no card in hand. Declare winner and delete room (winner declare is done, need to check if room is deleted)
-# If a plyer has mopre then 25 cards remove player from game. If only one player left in game delete room
+# if deck is less then 1 add discard pile to deck and shuffle exceppt the top card of discard pile
+# Uno call implementation
 # implement poin system if last is any special card hard the situation correctly so correct point distribution. (in v2)
