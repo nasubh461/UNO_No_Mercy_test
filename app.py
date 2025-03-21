@@ -678,6 +678,7 @@ if __name__ == '__main__':
 # show stack counter.
 # show playing color
 # if a player disconnects then let player to join using the same session token from join room page.
+# Show the no of cards in the players hand next to the player name in the player list ui sutff.
 
 # when a player is eliminated remove the player from the turn but not from room. so clicking leave button closes the game. -- done(need testing)
 # if a player disconnects then the player is not removed from the game.players list ---- done (need testing)
