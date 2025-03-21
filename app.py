@@ -663,3 +663,4 @@ if __name__ == '__main__':
 # playing color implementation ------ done(testing needed)
 # stacking draw card is drawed 1 extra -------- done(testing needed)
 # if a player is eleminated the it doesnt move to next player. right now eleminated player need some imput to continue. -- done (testing needed)
+

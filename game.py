@@ -124,7 +124,7 @@ class Unogame:
                 if player_card["type"] == "Draw Six" or player_card["type"] == "Draw Ten":
                     valid_staking_cards.append(i)
 
-        elif top_card["type"] == "Draw Tex":
+        elif top_card["type"] == "Draw Ten":
             for i, player_card in enumerate(player_deck):
                 if player_card["type"] == "Draw Ten":
                     valid_staking_cards.append(i)
