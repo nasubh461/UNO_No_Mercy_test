@@ -80,10 +80,11 @@ def delayed_removal(token, stop_event, username, room_code):
 
         print(f"Thread {token} stopped")
 
-def handle_special_effects(game, card, player, color):
+def handle_special_effects(game, card, player, color, room_code):
     # Implement special card logic here
     if card['type'] == 'Reverse':
         game.reverse_player()
+        socketio.emit("update_players", {"players": game.players}, room=room_code)
     elif card['type'] == 'Skip':
         game.next_player()
     elif card['type'] == 'Draw Two':
@@ -102,6 +103,7 @@ def handle_special_effects(game, card, player, color):
         game.stacked_cards += 4
         game.draw_pending = True
         game.reverse_player()
+        socketio.emit("update_players", {"players": game.players}, room=room_code)
     elif card['type'] == 'Discard All of Color':
         valid_color_index = game.find_valid_color_index(player, color)
         print("Disacrd all color indexes", valid_color_index)
@@ -357,6 +359,7 @@ def handle_play_card(data):
         game.players.remove(player)
 
         socketio.emit("player_disqualified", {"player": player}, room=room_code)
+        socketio.emit("update_players", {"players": game.players}, room=room_code)
 
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
@@ -438,7 +441,7 @@ def handle_play_card(data):
         game.discard_pile.append(card)
         
         # Handle special effects
-        handle_special_effects(game, card, player, game.playing_color)
+        handle_special_effects(game, card, player, game.playing_color, room_code)
         
         # Move to next player
         game.next_player()
@@ -582,6 +585,10 @@ def handle_leave_room(data):
 
             for sid in sids_to_delete:
                 user_sockets.pop(sid, None)
+
+            game = rooms[room_code].get('game')
+            if username not in game.players:
+                return
             
             emit("room_deleted", {"message": "Game ended as a player left"}, room=room_code)
             del rooms[room_code]  # Delete the room
@@ -664,3 +671,7 @@ if __name__ == '__main__':
 # stacking draw card is drawed 1 extra -------- done(testing needed)
 # if a player is eleminated the it doesnt move to next player. right now eleminated player need some imput to continue. -- done (testing needed)
 
+# implement player list like who is after who. visual implement
+# show stack counter.
+# show playing color
+# when a player is eliminated remove the player from the turn but not deom room. so clicking leave button colses the game.
