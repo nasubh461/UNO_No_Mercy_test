@@ -259,6 +259,11 @@ def handle_draw_card(data):
     game = rooms[room_code].get('game')
     player = sessions[session_token]['username'] 
 
+    if len(game.deck) <= 1:
+        game.deck  = game.deck + game.discard_pile[:-1]
+        random.shuffle(game.deck)
+        game.discard_pile = [game.discard_pile[-1]]
+
     if game and game.deck:
         if game.draw_pending == True and game.draw_started == True:
             
@@ -566,6 +571,11 @@ def handle_leave_room(data):
     if room_code in rooms:
         # If the game has started, delete the entire room and all sessions
         if rooms[room_code]['started']:
+
+            game = rooms[room_code].get('game')
+            if username not in game.players:
+                return
+            
             print(f"Game in {room_code} was active, deleting room and clearing all players' sessions.")
 
             tokens_to_delete = []
@@ -587,9 +597,7 @@ def handle_leave_room(data):
             for sid in sids_to_delete:
                 user_sockets.pop(sid, None)
 
-            game = rooms[room_code].get('game')
-            if username not in game.players:
-                return
+            
             
             emit("room_deleted", {"message": "Game ended as a player left"}, room=room_code)
             del rooms[room_code]  # Delete the room
@@ -665,20 +673,17 @@ if __name__ == '__main__':
 
 # Todo:
 # Implement 0 and 7 rule
-
-# if deck is less then 1 add discard pile to deck and shuffle exceppt the top card of discard pile
+# show stack counter.
+# show playing color
+# Show the no of cards in the players hand next to the player name in the player list
 # Uno call implementation
-# implement poin system if last is any special card hard the situation correctly so correct point distribution. (in v2)
+# implement point system if last is any special card hard the situation correctly so correct point distribution. (in v2)
 
+# implement player list like who is after who. visual implement (need some more ideas) ---- done
+# when a player is eliminated remove the player from the turn but not from room. so clicking leave button closes the game. -- done(need testing)
+# if a player disconnects then the player is not removed from the game.players list ---- done (need testing)
 # playing color implementation ------ done(testing needed)
 # stacking draw card is drawed 1 extra -------- done(testing needed)
 # if a player is eleminated the it doesnt move to next player. right now eleminated player need some imput to continue. -- done (testing needed)
-
-# implement player list like who is after who. visual implement (need some more ideas)
-# show stack counter.
-# show playing color
-# if a player disconnects then let player to join using the same session token from join room page.
-# Show the no of cards in the players hand next to the player name in the player list ui sutff.
-
-# when a player is eliminated remove the player from the turn but not from room. so clicking leave button closes the game. -- done(need testing)
-# if a player disconnects then the player is not removed from the game.players list ---- done (need testing)
+# if deck is less then 1 add discard pile to deck and shuffle exceppt the top card of discard pile. -- done (testing needed)
+# if a player disconnects then let player to join using the same session token from join room page.---done(this already exists but need to join using link)
