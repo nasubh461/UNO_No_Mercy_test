@@ -266,6 +266,30 @@ def handle_draw_card(data):
                 game.draw_started = False
                 game.next_player()
 
+                # Emit updates
+                socketio.emit("card_drawn", {
+                    "player": player,
+                    "new_card": drawn_card,
+                    "cards_left": game.cards_remaining()
+                }, room=request.sid)
+
+                # Send updated hand to player
+                player_hand = game.get_player_hand(player)
+                emit("your_hand", {
+                    "hand": player_hand,
+                    "discard_top": game.top_card(),
+                    "cards_left": game.cards_remaining()
+                }, room=request.sid)
+
+                # Broadcast game update
+                socketio.emit("game_update", {
+                    "current_player": game.current_players_turn(),
+                    "discard_top": game.top_card(),
+                    "cards_left": game.cards_remaining()
+                }, room=room_code)
+
+                return
+
         if game.draw_pending == True and game.draw_started == False:
             drawn_card = game.draw_card(player)
             game.draw_started = True
@@ -327,10 +351,27 @@ def handle_play_card(data):
             return
         game.deck = game.deck + game.hands[player]
         random.shuffle(game.deck)
-        socketio.emit("player_disqualified", {"player": player}, room=room_code)
+        
         game.hands[player] = []
         game.next_player()
         game.players.remove(player)
+
+        socketio.emit("player_disqualified", {"player": player}, room=room_code)
+
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=room_code)
+        
+        # Send updated hand to player
+        player_hand = game.get_player_hand(player)
+        emit("your_hand", {
+            "hand": player_hand,
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=request.sid)
+
         return
     
     if game.roulette == False:
@@ -614,7 +655,11 @@ if __name__ == '__main__':
 
 # Todo:
 # Implement 0 and 7 rule
-# implement stacked draw cards
+
 # if deck is less then 1 add discard pile to deck and shuffle exceppt the top card of discard pile
 # Uno call implementation
 # implement poin system if last is any special card hard the situation correctly so correct point distribution. (in v2)
+
+# playing color implementation ------ done(testing needed)
+# stacking draw card is drawed 1 extra -------- done(testing needed)
+# if a player is eleminated the it doesnt move to next player. right now eleminated player need some imput to continue. -- done (testing needed)
