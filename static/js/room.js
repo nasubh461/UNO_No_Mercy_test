@@ -35,19 +35,19 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "/";
     });
 
-    function updatePlayerList(players, gameStarted) {
+    function updatePlayerList(players, gameStarted, playerHands = {}) {
         playerList.innerHTML = "";
         players.forEach((player, index) => {
             let li = document.createElement("li");
-            li.textContent = player;
+
+            let cardCount = gameStarted && playerHands[player] !== undefined ? playerHands[player] : "N/A";
+            li.textContent = `${player} (${cardCount} cards)`;  // Show card count
+
             playerList.appendChild(li);
 
-            if (gameStarted == false) {
-                // Show "Start Game" button only for the first player
-                if (index === 0 && player === localStorage.getItem("username")) {
-                    startGameButton.style.display = "block";
-                }
-            }
+            if (!gameStarted && index === 0 && player === localStorage.getItem("username")) {
+                startGameButton.style.display = "block";
+            }            
         });
     }
 
@@ -175,6 +175,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
 
+                document.getElementById('draw-deck-size').textContent = `Draw Deck Size: ${data.draw_deck_size}`;
+                document.getElementById('discard-pile-size').textContent = `Discard Pile Size: ${data.discard_pile_size}`;  
+
+                document.getElementById('stack-counter').textContent = `Stack: ${data.stacked_cards}`;  // Update stack counter
+                document.getElementById('playing-color').textContent = `Playing Color: ${data.playing_color || 'None'}`;  // Update playing color               
+                // Update player list with hand sizes
+                updatePlayerList(data.player_hands ? Object.keys(data.player_hands) : [], true, data.player_hands);
+
                 // Get current user from localStorage
                 const currentUser = localStorage.getItem("username");
                 
@@ -191,7 +199,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("player_disqualified", function(data) {
-                alert(data.player + " is eleminated");
+                alert(data.player + " is eliminated");
             });
 
             socket.on("roulette", async function() {
@@ -227,13 +235,13 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             
             socket.on("roulette_draw", function (data) {
-                console.log("Roulette Card Drawn")
-                console.log(data.card_drawn)
+                console.log("Roulette Card Drawn");
+                console.log(data.card_drawn);
 
             });
 
             socket.on("roulette_end", function () {
-                alert("Roulette ended choosen color found")
+                alert("Roulette ended, chosen color found");
             });
 
             socket.on("game_over", function (data) {

@@ -216,9 +216,14 @@ def start_game():
             socketio.emit("game_update", {
                 "current_player": game.current_players_turn(),
                 "discard_top": game.top_card(),
-                "cards_left": game.cards_remaining()
+                "cards_left": game.cards_remaining(),
+                "stacked_cards": game.stacked_cards,  # Add stack counter
+                "playing_color": game.playing_color,  # Add playing color
+                "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+                "draw_deck_size": len(game.deck),
+                "discard_pile_size": len(game.discard_pile)
             }, room=room_code)
-
+            
             return jsonify({'status': 'started'})
         return jsonify({'status': 'not_enough_players'})
     return jsonify({'status': 'unauthorized'})
@@ -293,8 +298,14 @@ def handle_draw_card(data):
                 socketio.emit("game_update", {
                     "current_player": game.current_players_turn(),
                     "discard_top": game.top_card(),
-                    "cards_left": game.cards_remaining()
+                    "cards_left": game.cards_remaining(),
+                    "stacked_cards": game.stacked_cards,  # Add stack counter
+                    "playing_color": game.playing_color,  # Add playing color
+                    "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+                    "draw_deck_size": len(game.deck),
+                    "discard_pile_size": len(game.discard_pile)
                 }, room=room_code)
+            
 
                 return
 
@@ -332,8 +343,14 @@ def handle_draw_card(data):
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
             "discard_top": game.top_card(),
-            "cards_left": game.cards_remaining()
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,  # Add stack counter
+            "playing_color": game.playing_color,  # Add playing color
+            "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile)
         }, room=room_code)
+            
 
 
 # Add to handle_play_card function
@@ -370,8 +387,14 @@ def handle_play_card(data):
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
             "discard_top": game.top_card(),
-            "cards_left": game.cards_remaining()
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,  # Add stack counter
+            "playing_color": game.playing_color,  # Add playing color
+            "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile)
         }, room=room_code)
+            
         
         # Send updated hand to player
         player_hand = game.get_player_hand(player)
@@ -456,8 +479,14 @@ def handle_play_card(data):
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
             "discard_top": game.top_card(),
-            "cards_left": game.cards_remaining()
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,  # Add stack counter
+            "playing_color": game.playing_color,  # Add playing color
+            "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile)
         }, room=room_code)
+            
         
         # Send updated hand to player
         player_hand = game.get_player_hand(player)
@@ -494,8 +523,14 @@ def handle_color_selected(data):
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
             "discard_top": game.top_card(),
-            "cards_left": game.cards_remaining()
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,  # Add stack counter
+            "playing_color": game.playing_color,  # Add playing color
+            "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile)
         }, room=room_code)
+            
 
 @socketio.on("join_room")
 def handle_join_room(data):
@@ -546,7 +581,12 @@ def handle_join_room(data):
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
             "discard_top": game.top_card(),
-            "cards_left": game.cards_remaining()
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,  # Add stack counter
+            "playing_color": game.playing_color,  # Add playing color
+            "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile)
         }, room=room_code)
         
         # Send updated hand to player
@@ -673,9 +713,6 @@ if __name__ == '__main__':
 
 # Todo:
 # Implement 0 and 7 rule
-# show stack counter.
-# show playing color
-# Show the no of cards in the players hand next to the player name in the player list
 # Uno call implementation
 # implement point system if last is any special card hard the situation correctly so correct point distribution. (in v2)
 
@@ -687,3 +724,6 @@ if __name__ == '__main__':
 # if a player is eleminated the it doesnt move to next player. right now eleminated player need some imput to continue. -- done (testing needed)
 # if deck is less then 1 add discard pile to deck and shuffle exceppt the top card of discard pile. -- done (testing needed)
 # if a player disconnects then let player to join using the same session token from join room page.---done(this already exists but need to join using link)
+# show stack counter. --- done
+# show playing color ---- done
+# Show the no of cards in the players hand next to the player name in the player list ---- done
