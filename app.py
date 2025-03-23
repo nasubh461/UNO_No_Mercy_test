@@ -727,3 +727,8 @@ if __name__ == '__main__':
 # show stack counter. --- done
 # show playing color ---- done
 # Show the no of cards in the players hand next to the player name in the player list ---- done
+
+# Remove space before sending to server room code
+# Make room code not case sensitive
+# turn of roulette alert
+# username cant be numeric
