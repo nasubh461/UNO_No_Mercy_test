@@ -12,6 +12,7 @@ class Unogame:
         self.players = list(player_names)
         random.shuffle(self.players)
         self.hands = {player: [] for player in self.players}
+        self.uno_flags = {player: False for player in self.players}
         self._init_discard_pile()
         self.distribute_cards()
         self.awaiting_color_choice = False
@@ -31,7 +32,17 @@ class Unogame:
 
     def distribute_cards(self):
         for player in self.players:
-            self.hands[player] = [self.deck.pop() for _ in range(7)]       
+            self.hands[player] = [self.deck.pop() for _ in range(3)]   
+
+    def call_uno(self, player):
+        self.uno_flags[player] = True
+
+    def reset_uno(self, player):
+        self.uno_flags[player] = False
+
+    # Add method to check UNO status
+    def has_called_uno(self, player):
+        return self.uno_flags[player]    
     
     def get_player_hand(self, player):
         return self.hands.get(player, [])
@@ -126,5 +137,6 @@ class Unogame:
             "hands": {player: hand for player, hand in self.hands.items()},
             "playing_color": self.playing_color,
             "roulette": self.roulette,
-            "stacked_cards":self.stacked_cards
+            "stacked_cards":self.stacked_cards,
+            "uno_flags": self.uno_flags
         }

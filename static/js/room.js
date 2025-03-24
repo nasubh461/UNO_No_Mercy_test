@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var startGameButton = document.getElementById("start-game-btn");
     var drawButton = document.getElementById("draw-card-btn");
     var newGameButton = document.getElementById("new-game-btn");
+    var callUnoButton = document.getElementById("call-uno-btn");
 
 
     let currentHand = [];
@@ -18,6 +19,10 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "/";
         return;
     }
+
+    callUnoButton.addEventListener("click", function () {
+        socket.emit("call_uno", { room: roomCode });
+    });
 
     drawButton.addEventListener("click", function() {
         socket.emit("draw_card", { room: roomCode });
@@ -54,22 +59,34 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             });
         });
+        
     }
 
-    function updatePlayerList(players, gameStarted, playerHands = {}) {
+    function updatePlayerList(players, gameStarted, playerHands = {}, unoFlags = {}) {
         playerList.innerHTML = "";
         players.forEach((player, index) => {
             let li = document.createElement("li");
-
             let cardCount = gameStarted && playerHands[player] !== undefined ? playerHands[player] : "N/A";
-            li.textContent = `${player} (${cardCount} cards)`;  // Show card count
-
+            let unoStatus = unoFlags[player] ? " (UNO)" : "";
+            li.textContent = `${player}${unoStatus} (${cardCount} cards)`;
+    
+            if (gameStarted && player !== localStorage.getItem("username")) {
+                let caughtButton = document.createElement("button");
+                caughtButton.textContent = "Caught";
+                caughtButton.style.marginLeft = "10px";
+                caughtButton.addEventListener("click", () => {
+                    socket.emit("catch_uno", { room: roomCode, target_player: player });
+                });
+                li.appendChild(caughtButton);
+            }
+    
             playerList.appendChild(li);
-
+    
             if (!gameStarted && index === 0 && player === localStorage.getItem("username")) {
                 startGameButton.style.display = "block";
-            }            
+            }
         });
+        // Removed the conditional display of callUnoButton; it will always be visible in HTML
     }
 
     function getCardColor(color) {
@@ -218,12 +235,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('stack-counter').textContent = `Stack: ${data.stacked_cards}`;  // Update stack counter
                 document.getElementById('playing-color').textContent = `Playing Color: ${data.playing_color || 'None'}`;  // Update playing color               
                 // Update player list with hand sizes
-                updatePlayerList(data.player_hands ? Object.keys(data.player_hands) : [], true, data.player_hands);
+                updatePlayerList(data.player_hands ? Object.keys(data.player_hands) : [], true, data.player_hands, data.uno_flags);
 
-                // Get current user from localStorage
                 const currentUser = localStorage.getItem("username");
-                
-                // Show draw button only for current player
                 if (data.current_player === currentUser) {
                     drawButton.style.display = "block";
                 } else {
@@ -233,6 +247,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
             socket.on("play_error", function(data) {
                 alert(data.message);
+            });
+
+            socket.on("uno_called", function (data) {
+                alert(`${data.player} called UNO!`);
+            });
+
+            socket.on("uno_caught", function (data) {
+                alert(`${data.caller} caught ${data.target_player}! ${data.target_player} draws 4 cards.`);
             });
 
             socket.on("player_disqualified", function(data) {

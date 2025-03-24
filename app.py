@@ -240,7 +240,8 @@ def start_game():
                 "playing_color": game.playing_color,  # Add playing color
                 "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
                 "draw_deck_size": len(game.deck),
-                "discard_pile_size": len(game.discard_pile)
+                "discard_pile_size": len(game.discard_pile),
+                "uno_flags": game.uno_flags
             }, room=room_code)
             
             return jsonify({'status': 'started'})
@@ -282,6 +283,9 @@ def handle_draw_card(data):
     
     game = rooms[room_code].get('game')
     player = sessions[session_token]['username'] 
+
+    if len(game.hands[player]) > 1:
+            game.reset_uno(player)
 
     if game.awaiting_player_choice == True:
         emit("play_error", {"message": "You must select a player to swap hands with!"}, room=request.sid)
@@ -326,7 +330,8 @@ def handle_draw_card(data):
                     "playing_color": game.playing_color,  # Add playing color
                     "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
                     "draw_deck_size": len(game.deck),
-                    "discard_pile_size": len(game.discard_pile)
+                    "discard_pile_size": len(game.discard_pile),
+                    "uno_flags": game.uno_flags
                 }, room=room_code)
             
 
@@ -370,7 +375,8 @@ def handle_draw_card(data):
             "playing_color": game.playing_color,  # Add playing color
             "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
             "draw_deck_size": len(game.deck),
-            "discard_pile_size": len(game.discard_pile)
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
         }, room=room_code)
             
 
@@ -418,7 +424,8 @@ def handle_play_card(data):
             "playing_color": game.playing_color,  # Add playing color
             "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
             "draw_deck_size": len(game.deck),
-            "discard_pile_size": len(game.discard_pile)
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
         }, room=room_code)
             
         
@@ -501,6 +508,9 @@ def handle_play_card(data):
         if not game.awaiting_player_choice:
             game.next_player()
 
+        if len(game.hands[player]) > 1:
+            game.reset_uno(player)
+
         # Broadcast game update
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
@@ -510,7 +520,8 @@ def handle_play_card(data):
             "playing_color": game.playing_color,  # Add playing color
             "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
             "draw_deck_size": len(game.deck),
-            "discard_pile_size": len(game.discard_pile)
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
         }, room=room_code)
             
         
@@ -535,6 +546,100 @@ def handle_play_card(data):
     else:
         socketio.emit("play_error", {"message": "You must draw cards until you get a card that matches the color choosen."}, room=request.sid)
 
+@socketio.on("call_uno")
+def handle_call_uno(data):
+    room_code = data.get('room')
+    session_token = user_sockets.get(request.sid)
+    
+    if not session_token or room_code not in rooms:
+        return
+    
+    game = rooms[room_code].get('game')
+    player = sessions[session_token]['username']
+    
+    if game:
+        if game.current_players_turn() == player and len(game.hands[player]) == 2:
+            game.call_uno(player)
+            socketio.emit("uno_called", {"player": player}, room=room_code)
+            socketio.emit("game_update", {
+                "current_player": game.current_players_turn(),
+                "discard_top": game.top_card(),
+                "cards_left": game.cards_remaining(),
+                "stacked_cards": game.stacked_cards,
+                "playing_color": game.playing_color,
+                "player_hands": {player: len(game.hands[player]) for player in game.players},
+                "draw_deck_size": len(game.deck),
+                "discard_pile_size": len(game.discard_pile),
+                "uno_flags": game.uno_flags
+            }, room=room_code)
+
+        elif len(game.hands[player]) == 1:
+            if game.has_called_uno(player) == False:
+                game.call_uno(player)
+                socketio.emit("uno_called", {"player": player}, room=room_code)
+                socketio.emit("game_update", {
+                    "current_player": game.current_players_turn(),
+                    "discard_top": game.top_card(),
+                    "cards_left": game.cards_remaining(),
+                    "stacked_cards": game.stacked_cards,
+                    "playing_color": game.playing_color,
+                    "player_hands": {player: len(game.hands[player]) for player in game.players},
+                    "draw_deck_size": len(game.deck),
+                    "discard_pile_size": len(game.discard_pile),
+                    "uno_flags": game.uno_flags
+                }, room=room_code)
+            else:
+                emit("play_error", {"message": "You have already called UNO!"}, room=request.sid)
+        else:
+            emit("play_error", {"message": "You can't call uno now"}, room=request.sid)
+
+
+
+@socketio.on("catch_uno")
+def handle_catch_uno(data):
+    room_code = data.get('room')
+    target_player = data.get('target_player')
+    session_token = user_sockets.get(request.sid)
+    
+    if not session_token or room_code not in rooms:
+        return
+    
+    game = rooms[room_code].get('game')
+    caller = sessions[session_token]['username']
+    
+    if game and target_player in game.players and caller != target_player:
+        if len(game.hands[target_player]) == 1 and not game.has_called_uno(target_player):
+            # Player failed to call UNO, draw 4 cards
+            for _ in range(4):
+                if game.deck:
+                    game.draw_card(target_player)
+            game.reset_uno(target_player)  # Reset UNO flag after penalty
+            socketio.emit("uno_caught", {"target_player": target_player, "caller": caller}, room=room_code)
+            
+            # Update the target player's hand
+            for sid, token in user_sockets.items():
+                if token in sessions and sessions[token]['username'] == target_player:
+                    socketio.emit("your_hand", {
+                        "hand": game.hands[target_player],
+                        "discard_top": game.top_card(),
+                        "cards_left": game.cards_remaining()
+                    }, room=sid)
+                    break
+            
+            socketio.emit("game_update", {
+                "current_player": game.current_players_turn(),
+                "discard_top": game.top_card(),
+                "cards_left": game.cards_remaining(),
+                "stacked_cards": game.stacked_cards,
+                "playing_color": game.playing_color,
+                "player_hands": {player: len(game.hands[player]) for player in game.players},
+                "draw_deck_size": len(game.deck),
+                "discard_pile_size": len(game.discard_pile),
+                "uno_flags": game.uno_flags
+            }, room=room_code)
+        else:
+            emit("play_error", {"message": f"{target_player} already called UNO or doesn't have 1 card!"}, room=request.sid)
+
 @socketio.on("color_selected")
 def handle_color_selected(data):
     room_code = data.get('room')
@@ -554,7 +659,8 @@ def handle_color_selected(data):
             "playing_color": game.playing_color,  # Add playing color
             "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
             "draw_deck_size": len(game.deck),
-            "discard_pile_size": len(game.discard_pile)
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
         }, room=room_code)
             
 @socketio.on("player_selected_for_swap")
@@ -597,7 +703,8 @@ def handle_player_selected_for_swap(data):
             "playing_color": game.playing_color,
             "player_hands": {player: len(game.hands[player]) for player in game.players},
             "draw_deck_size": len(game.deck),
-            "discard_pile_size": len(game.discard_pile)
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
         }, room=room_code)
 
 @socketio.on("join_room")
@@ -654,7 +761,8 @@ def handle_join_room(data):
             "playing_color": game.playing_color,  # Add playing color
             "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
             "draw_deck_size": len(game.deck),
-            "discard_pile_size": len(game.discard_pile)
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
         }, room=room_code)
         
         # Send updated hand to player
@@ -780,8 +888,6 @@ if __name__ == '__main__':
 
 
 # Todo:
-
-# Uno call implementation
 # implement point system if last is any special card hard the situation correctly so correct point distribution. (in v2)
 
 # implement player list like who is after who. visual implement (need some more ideas) ---- done
@@ -800,3 +906,4 @@ if __name__ == '__main__':
 # Make room code not case sensitive ----  done
 # turn of roulette alert ---- done
 # username cant be numeric ----  done
+# # Uno call implementation --- done
