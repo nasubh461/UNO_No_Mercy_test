@@ -287,6 +287,43 @@ def handle_draw_card(data):
     if len(game.hands[player]) > 1:
             game.reset_uno(player)
 
+    if len(game.hands[player]) >= 25:
+        if len(game.players) == 2:
+            emit("game_over", {"winner": game.players[1], "discard_top": game.top_card()}, room=room_code)
+            return
+        game.deck = game.deck + game.hands[player]
+        random.shuffle(game.deck)
+        
+        game.hands[player] = []
+        game.next_player()
+        game.players.remove(player)
+
+        socketio.emit("player_disqualified", {"player": player}, room=room_code)
+        socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
+
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,  # Add stack counter
+            "playing_color": game.playing_color,  # Add playing color
+            "player_hands": {player: len(game.hands[player]) for player in game.players},  # Add hand sizes
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile),
+            "uno_flags": game.uno_flags
+        }, room=room_code)
+            
+        
+        # Send updated hand to player
+        player_hand = game.get_player_hand(player)
+        emit("your_hand", {
+            "hand": player_hand,
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining()
+        }, room=request.sid)
+
+        return
+
     if game.awaiting_player_choice == True:
         emit("play_error", {"message": "You must select a player to swap hands with!"}, room=request.sid)
         return
