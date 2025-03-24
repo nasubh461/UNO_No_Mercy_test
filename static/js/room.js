@@ -292,10 +292,13 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             leaveButton.addEventListener("click", function () {
-                socket.emit("leave_room", { room: roomCode, username: username, session: sessionToken });
-                localStorage.removeItem("session_token");
-                localStorage.removeItem("username");
-                window.location.href = "/";
+                const confirmation = confirm("Are you sure you want to leave the room?");
+                if (confirmation) {
+                    socket.emit("leave_room", { room: roomCode, username: username, session: sessionToken });
+                    localStorage.removeItem("session_token");
+                    localStorage.removeItem("username");
+                    window.location.href = "/";
+                }
             });
 
             startGameButton.addEventListener("click", function () {
