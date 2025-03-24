@@ -343,7 +343,6 @@ def handle_draw_card(data):
                 socketio.emit("roulette_draw", {'card_drawn' : drawn_card}, room=room_code)
                 if drawn_card['color'] == game.playing_color:
                     game.roulette = False
-                    socketio.emit("roulette_end", {}, room=request.sid)
                     game.next_player()
 
 
@@ -781,7 +780,7 @@ if __name__ == '__main__':
 
 
 # Todo:
-# Implement 0 and 7 rule
+
 # Uno call implementation
 # implement point system if last is any special card hard the situation correctly so correct point distribution. (in v2)
 
@@ -796,8 +795,8 @@ if __name__ == '__main__':
 # show stack counter. --- done
 # show playing color ---- done
 # Show the no of cards in the players hand next to the player name in the player list ---- done
-
-# Remove space before sending to server room code
-# Make room code not case sensitive
-# turn of roulette alert
-# username cant be numeric
+# Implement 0 and 7 rule ---- done
+# Remove space before sending to server room code --- done
+# Make room code not case sensitive ----  done
+# turn of roulette alert ---- done
+# username cant be numeric ----  done

@@ -277,10 +277,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             });
 
-            socket.on("roulette_end", function () {
-                alert("Roulette ended, chosen color found");
-            });
-
             socket.on("game_over", function (data) {
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
                 // Hide game controls
