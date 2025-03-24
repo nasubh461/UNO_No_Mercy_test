@@ -122,7 +122,6 @@ def handle_special_effects(game, card, player, color, room_code):
         players_cards = list(game.hands.values())
         rotated_values = players_cards[-1:] + players_cards[:-1]
         game.hands = dict(zip(game.hands.keys(), rotated_values))
-
         for sid, session_token in user_sockets.items():
             if session_token in sessions:
                 player_name = sessions[session_token]['username']
@@ -134,7 +133,14 @@ def handle_special_effects(game, card, player, color, room_code):
                     }, room=sid)
 
     elif card['type'] == '7':
-        pass
+        game.awaiting_player_choice = True  # Add flag to pause game progression
+        # Emit event to prompt the player who played the '7' to select another player
+        for sid, session_token in user_sockets.items():
+            if session_token in sessions and sessions[session_token]['username'] == player:
+                # Send list of other players (excluding the current player)
+                other_players = [p for p in game.players if p != player]
+                socketio.emit("select_player_for_swap", {"players": other_players}, room=sid)
+                break
 
 @app.route('/')
 def index():
@@ -277,6 +283,10 @@ def handle_draw_card(data):
     game = rooms[room_code].get('game')
     player = sessions[session_token]['username'] 
 
+    if game.awaiting_player_choice == True:
+        emit("play_error", {"message": "You must select a player to swap hands with!"}, room=request.sid)
+        return
+
     if len(game.deck) <= 1:
         game.deck  = game.deck + game.discard_pile[:-1]
         random.shuffle(game.deck)
@@ -383,6 +393,10 @@ def handle_play_card(data):
     if not game or index is None:
         return
     
+    if game.awaiting_player_choice == True:
+        emit("play_error", {"message": "You must select a player to swap hands with!"}, room=request.sid)
+        return
+    
     if len(game.hands[player]) >= 25:
         if len(game.players) == 2:
             emit("game_over", {"winner": game.players[1], "discard_top": game.top_card()}, room=room_code)
@@ -485,9 +499,9 @@ def handle_play_card(data):
         # Handle special effects
         handle_special_effects(game, card, player, game.playing_color, room_code)
         
-        # Move to next player
-        game.next_player()
-        
+        if not game.awaiting_player_choice:
+            game.next_player()
+
         # Broadcast game update
         socketio.emit("game_update", {
             "current_player": game.current_players_turn(),
@@ -544,6 +558,48 @@ def handle_color_selected(data):
             "discard_pile_size": len(game.discard_pile)
         }, room=room_code)
             
+@socketio.on("player_selected_for_swap")
+def handle_player_selected_for_swap(data):
+    room_code = data.get('room')
+    session_token = user_sockets.get(request.sid)
+    selected_player = data.get('selected_player')
+    
+    if not session_token or room_code not in rooms:
+        return
+    
+    game = rooms[room_code].get('game')
+    player = sessions[session_token]['username']
+    
+    if game and game.awaiting_player_choice and selected_player in game.players and selected_player != player:
+        # Swap hands between the current player and the selected player
+        game.hands[player], game.hands[selected_player] = game.hands[selected_player], game.hands[player]
+        
+        # Update both players' hands
+        for sid, token in user_sockets.items():
+            if token in sessions:
+                username = sessions[token]['username']
+                if username in [player, selected_player]:
+                    socketio.emit("your_hand", {
+                        "hand": game.hands[username],
+                        "discard_top": game.top_card(),
+                        "cards_left": game.cards_remaining()
+                    }, room=sid)
+        
+        # Resume game progression
+        game.awaiting_player_choice = False
+        game.next_player()
+        
+        # Broadcast game update
+        socketio.emit("game_update", {
+            "current_player": game.current_players_turn(),
+            "discard_top": game.top_card(),
+            "cards_left": game.cards_remaining(),
+            "stacked_cards": game.stacked_cards,
+            "playing_color": game.playing_color,
+            "player_hands": {player: len(game.hands[player]) for player in game.players},
+            "draw_deck_size": len(game.deck),
+            "discard_pile_size": len(game.discard_pile)
+        }, room=room_code)
 
 @socketio.on("join_room")
 def handle_join_room(data):

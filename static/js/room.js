@@ -35,6 +35,27 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "/";
     });
 
+    function promptPlayerSelection(players) {
+        return new Promise(resolve => {
+            const playerPicker = document.createElement('div');
+            playerPicker.innerHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px;">
+                    <p>Choose a player to swap hands with:</p>
+                    ${players.map(player => `<button style="padding: 10px;" data-player="${player}">${player}</button>`).join('')}
+                </div>
+            `;
+            
+            document.body.appendChild(playerPicker);
+            
+            playerPicker.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.body.removeChild(playerPicker);
+                    resolve(e.target.dataset.player);
+                });
+            });
+        });
+    }
+
     function updatePlayerList(players, gameStarted, playerHands = {}) {
         playerList.innerHTML = "";
         players.forEach((player, index) => {
@@ -168,6 +189,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 updateHandDisplay();
                 
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+            });
+
+            socket.on("select_player_for_swap", async function(data) {
+                console.log("=== SELECT PLAYER FOR SWAP ===");
+                console.log("Available Players:", data.players);
+                console.log("==============================");
+                
+                try {
+                    const selectedPlayer = await promptPlayerSelection(data.players);
+                    socket.emit("player_selected_for_swap", { 
+                        room: roomCode,
+                        selected_player: selectedPlayer
+                    });
+                } catch (error) {
+                    console.error("Player selection failed:", error);
+                }
             });
 
             // Add new event listener for game state updates
