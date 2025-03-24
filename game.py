@@ -32,7 +32,7 @@ class Unogame:
 
     def distribute_cards(self):
         for player in self.players:
-            self.hands[player] = [self.deck.pop() for _ in range(3)]   
+            self.hands[player] = [self.deck.pop() for _ in range(7)]   
 
     def call_uno(self, player):
         self.uno_flags[player] = True

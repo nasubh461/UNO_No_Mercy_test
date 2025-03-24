@@ -30,11 +30,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Add click handler for new game button
     newGameButton.addEventListener("click", function() {
-        socket.emit("leave_room", { 
-            room: roomCode, 
-            username: localStorage.getItem("username"), 
-            session: sessionToken 
-        });
+        // socket.emit("leave_room", { 
+        //     room: roomCode, 
+        //     username: localStorage.getItem("username"), 
+        //     session: sessionToken 
+        // });
         localStorage.removeItem("session_token");
         localStorage.removeItem("username");
         window.location.href = "/";
