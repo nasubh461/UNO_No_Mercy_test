@@ -119,7 +119,20 @@ def handle_special_effects(game, card, player, color, room_code):
     elif card['type'] == 'Skip All':
         game.skip_all()
     elif card['type'] == '0':
-        pass
+        players_cards = list(game.hands.values())
+        rotated_values = players_cards[-1:] + players_cards[:-1]
+        game.hands = dict(zip(game.hands.keys(), rotated_values))
+
+        for sid, session_token in user_sockets.items():
+            if session_token in sessions:
+                player_name = sessions[session_token]['username']
+                if player_name in game.hands and player_name != player:
+                    socketio.emit("your_hand", {
+                        "hand": game.hands[player_name],
+                        "discard_top": game.top_card() if game.discard_pile else None,
+                        "cards_left": game.cards_remaining()
+                    }, room=sid)
+
     elif card['type'] == '7':
         pass
 
