@@ -20,14 +20,14 @@ disconnect_timers = {}
 
 def generate_room_code():
     room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    if room_code in rooms:
-        return generate_room_code()
+    while room_code in rooms:
+        room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     return room_code
 
 def generate_session_token():
     session_token = secrets.token_hex(16)
-    if session_token in sessions:
-        return generate_session_token()
+    while session_token in sessions:
+        session_token = secrets.token_hex(16)
     return session_token
 
 def start_thread(token, username, room_code, game):
@@ -227,8 +227,10 @@ def start_game():
 
             for sid, session_token in user_sockets.items():
                 if session_token in sessions:
-                    player_name = sessions[session_token]['username']
-                    if player_name in game.hands:
+                    session_data = sessions[session_token]
+                    player_name = session_data['username']
+                    player_room = session_data['room_code']
+                    if player_room == room_code and player_name in game.hands:
                         socketio.emit("your_hand", {
                             "hand": game.hands[player_name],
                             "discard_top": game.top_card(),
@@ -288,7 +290,12 @@ def handle_draw_card(data):
     room_code = data.get('room')
     session_token = user_sockets.get(request.sid)
     
-    if not session_token or room_code not in rooms:
+    if not session_token or session_token not in sessions or sessions[session_token]['room_code'] != room_code:
+        # emit("error", {"message": "Invalid session or room"}, room=request.sid)
+        return
+    
+    if room_code not in rooms or not rooms[room_code]['started']:
+        # emit("error", {"message": "Game not started or room not found"}, room=request.sid)
         return
     
     game = rooms[room_code].get('game')
@@ -440,7 +447,12 @@ def handle_play_card(data):
     room_code = data.get('room')
     session_token = user_sockets.get(request.sid)
     
-    if not session_token or room_code not in rooms:
+    if not session_token or session_token not in sessions or sessions[session_token]['room_code'] != room_code:
+        # emit("error", {"message": "Invalid session or room"}, room=request.sid)
+        return
+    
+    if room_code not in rooms or not rooms[room_code]['started']:
+        # emit("error", {"message": "Game not started or room not found"}, room=request.sid)
         return
     
     game = rooms[room_code].get('game')
@@ -608,7 +620,12 @@ def handle_call_uno(data):
     room_code = data.get('room')
     session_token = user_sockets.get(request.sid)
     
-    if not session_token or room_code not in rooms:
+    if not session_token or session_token not in sessions or sessions[session_token]['room_code'] != room_code:
+        # emit("error", {"message": "Invalid session or room"}, room=request.sid)
+        return
+    
+    if room_code not in rooms or not rooms[room_code]['started']:
+        # emit("error", {"message": "Game not started or room not found"}, room=request.sid)
         return
     
     game = rooms[room_code].get('game')
@@ -658,7 +675,12 @@ def handle_catch_uno(data):
     target_player = data.get('target_player')
     session_token = user_sockets.get(request.sid)
     
-    if not session_token or room_code not in rooms:
+    if not session_token or session_token not in sessions or sessions[session_token]['room_code'] != room_code:
+        # emit("error", {"message": "Invalid session or room"}, room=request.sid)
+        return
+    
+    if room_code not in rooms or not rooms[room_code]['started']:
+        # emit("error", {"message": "Game not started or room not found"}, room=request.sid)
         return
     
     game = rooms[room_code].get('game')
@@ -773,7 +795,7 @@ def handle_join_room(data):
     print(session_token)
     print(user_sockets)
     print(sessions)
-    print(rooms)       
+    print(rooms)      
 
     if room_code in rooms and not rooms[room_code]['started']:
         if username not in rooms[room_code]['players']:
