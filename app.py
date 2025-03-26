@@ -19,10 +19,16 @@ user_sockets = {} # {'_41gysDDBbyMJtXhAAAB': '7c40fd705e1511751f6fbf5dd94936c7'}
 disconnect_timers = {}
 
 def generate_room_code():
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    if room_code in rooms:
+        return generate_room_code()
+    return room_code
 
 def generate_session_token():
-    return secrets.token_hex(16)
+    session_token = secrets.token_hex(16)
+    if session_token in sessions:
+        return generate_session_token()
+    return session_token
 
 def start_thread(token, username, room_code, game):
         stop_event = threading.Event()
@@ -32,15 +38,15 @@ def start_thread(token, username, room_code, game):
 
 def stop_thread(token):
     if token in disconnect_timers:
-        print(f"Cancelling removal of {token}...")
+        print(f"Cancelled removal of {token}...")
         disconnect_timers[token][1].set()  # Set the stop event
         disconnect_timers[token][0].join()  # Wait for the thread to finish
         del disconnect_timers[token]
     else:
-        print(f"Thread {token} not found")
+        print(f"{token} not found.")
 
 def delayed_removal(token, stop_event, username, room_code, game):
-    print(f"Thread {token} started")
+    print(f"Started removing of {token}...")
 
     # Starting a 30s timer
     for _ in range(30):
@@ -60,12 +66,6 @@ def delayed_removal(token, stop_event, username, room_code, game):
                 print(f"Room {room_code} empty. Deleting and notifying.")
                 socketio.emit("room_deleted", {"message": "Game ended as all players left"}, room=room_code)
                 del rooms[room_code]
-            else:
-                # Case 2: Game started and only one player remains
-                if rooms[room_code]['started'] and len(rooms[room_code]['players']) == 1:
-                    print(f"Single player left in started game. Deleting room {room_code}.")
-                    socketio.emit("room_deleted", {"message": "Game ended as players left"}, room=room_code)
-                    del rooms[room_code]
 
         # Cleanup session and timers
         if token in sessions:
@@ -74,37 +74,46 @@ def delayed_removal(token, stop_event, username, room_code, game):
             del disconnect_timers[token]
 
         game.players.remove(username)
-        print(f"User {username} with  permanently removed after 30 sec of inactivity.")            
+        print(f"User {token} permanently removed after 30 sec of inactivity.")            
 
-        if room_code in rooms:                                
-            socketio.emit("update_players", {"players": rooms[room_code]['players'], "game_started": rooms[room_code]['started']}, room=room_code)
+        if room_code in rooms and rooms[room_code]['started'] == True:                                
+            socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
+        if room_code in rooms and rooms[room_code]['started'] == False:
+            socketio.emit("update_players", {"players": rooms[room_code]['players'], "game_started": rooms[room_code]['started']}, room=room_code)    
 
-        print(f"Thread {token} stopped")
+        print(f"Thread for {token} stopped")
 
 def handle_special_effects(game, card, player, color, room_code):
     # Implement special card logic here
     if card['type'] == 'Reverse':
         game.reverse_player()
         socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
+
     elif card['type'] == 'Skip':
         game.next_player()
+
     elif card['type'] == 'Draw Two':
         game.stacked_cards += 2
         game.draw_pending = True
+
     elif card['type'] == 'Draw Four':
         game.stacked_cards += 4
         game.draw_pending = True
+
     elif card['type'] == 'Draw Six':
         game.stacked_cards += 6
         game.draw_pending = True
+
     elif card['type'] == 'Draw Ten':
         game.stacked_cards += 10
         game.draw_pending = True
+
     elif card['type'] == 'Reverse Draw Four':
         game.stacked_cards += 4
         game.draw_pending = True
         game.reverse_player()
         socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
+
     elif card['type'] == 'Discard All of Color':
         valid_color_index = game.find_valid_color_index(player, color)
         print("Disacrd all color indexes", valid_color_index)
@@ -115,9 +124,11 @@ def handle_special_effects(game, card, player, color, room_code):
             valid_color_index = game.find_valid_color_index(player, color)
             print("Disacrd all color indexes 2", valid_color_index)
         game.discard_pile.append(temp_card)
-        game.playing_color = temp_card['color']          
+        game.playing_color = temp_card['color']    
+
     elif card['type'] == 'Skip All':
         game.skip_all()
+
     elif card['type'] == '0':
         players_cards = list(game.hands.values())
         rotated_values = players_cards[-1:] + players_cards[:-1]
@@ -154,7 +165,7 @@ def create_room():
     session_token = generate_session_token()
 
     if room_code not in rooms:
-        rooms[room_code] = {'players': [], 'started': False, 'game': None} #
+        rooms[room_code] = {'players': [], 'started': False, 'game': None}
     
     rooms[room_code]['players'].append(player_name)
     sessions[session_token] = {'username': player_name, 'room_code': room_code}
@@ -214,14 +225,13 @@ def start_game():
             game = Unogame(*rooms[room_code]['players'])
             rooms[room_code]['game'] = game
 
-            player_hands = {player: game.get_player_hand(player) for player in rooms[room_code]['players']}
             for sid, session_token in user_sockets.items():
                 if session_token in sessions:
                     player_name = sessions[session_token]['username']
-                    if player_name in player_hands:
+                    if player_name in game.hands:
                         socketio.emit("your_hand", {
-                            "hand": player_hands[player_name],
-                            "discard_top": game.top_card() if game.discard_pile else None,
+                            "hand": game.hands[player_name],
+                            "discard_top": game.top_card(),
                             "cards_left": game.cards_remaining()
                         }, room=sid)
 
@@ -289,7 +299,10 @@ def handle_draw_card(data):
 
     if len(game.hands[player]) >= 25:
         if len(game.players) == 2:
-            emit("game_over", {"winner": game.players[1], "discard_top": game.top_card()}, room=room_code)
+            emit("game_over", {
+                "winner": game.players[1], 
+                "discard_top": game.top_card()
+            }, room=room_code)
             return
         game.deck = game.deck + game.hands[player]
         random.shuffle(game.deck)
@@ -373,8 +386,7 @@ def handle_draw_card(data):
                     "draw_deck_size": len(game.deck),
                     "discard_pile_size": len(game.discard_pile),
                     "uno_flags": game.uno_flags
-                }, room=room_code)
-            
+                }, room=room_code)           
 
                 return
 
@@ -531,7 +543,7 @@ def handle_play_card(data):
         if card['color'] == 'Wild' and card['type'] == 'Color Roulette':
             game.roulette = True
             game.awaiting_color_choice = True
-            game.playing_color = None
+            game.playing_color = 'Wild'
             print("Roulette mode activated")
         
         # Handle Wild cards
@@ -603,7 +615,7 @@ def handle_call_uno(data):
     player = sessions[session_token]['username']
     
     if game:
-        if game.current_players_turn() == player and len(game.hands[player]) == 2:
+        if game.current_players_turn() == player:
             game.call_uno(player)
             socketio.emit("uno_called", {"player": player}, room=room_code)
             socketio.emit("game_update", {
@@ -655,7 +667,7 @@ def handle_catch_uno(data):
     if game and target_player in game.players and caller != target_player:
         if len(game.hands[target_player]) == 1 and not game.has_called_uno(target_player):
             # Player failed to call UNO, draw 4 cards
-            for _ in range(4):
+            for _ in range(2):
                 if game.deck:
                     game.draw_card(target_player)
             game.reset_uno(target_player)  # Reset UNO flag after penalty
