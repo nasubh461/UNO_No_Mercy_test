@@ -298,6 +298,10 @@ def handle_draw_card(data):
         game.next_player()
         game.players.remove(player)
 
+        game.draw_pending = False
+        game.draw_started = False
+        game.roulette = False
+
         socketio.emit("player_disqualified", {"player": player}, room=room_code)
         socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
 
@@ -449,6 +453,10 @@ def handle_play_card(data):
         game.hands[player] = []
         game.next_player()
         game.players.remove(player)
+
+        game.draw_pending = False
+        game.draw_started = False
+        game.roulette = False
 
         socketio.emit("player_disqualified", {"player": player}, room=room_code)
         socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
