@@ -226,16 +226,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Add new event listener for game state updates
             socket.on("game_update", function(data) {
-                const discardTop = document.getElementById('discard-top');
-                discardTop.innerHTML = `
-                    <div class="card-top">${data.discard_top.color}</div>
-                    <div class="card-center">${data.discard_top.type || data.discard_top.value}</div>
-                `;
-                // Remove any previous color classes
-                ['card-red', 'card-blue', 'card-green', 'card-yellow', 'card-wild'].forEach(cls => discardTop.classList.remove(cls));
-                // Add the new color class based on the top card's color
-                discardTop.classList.add(`card-${data.discard_top.color.toLowerCase()}`);
-
                 document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
 
