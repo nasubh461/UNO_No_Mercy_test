@@ -229,6 +229,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
 
+                document.getElementById('discard-top').style.backgroundColor = getCardColor(data.playing_color);
+
                 document.getElementById('draw-deck-size').textContent = `Draw Deck Size: ${data.draw_deck_size}`;
                 document.getElementById('discard-pile-size').textContent = `Discard Pile Size: ${data.discard_pile_size}`;  
 
