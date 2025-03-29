@@ -229,7 +229,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
 
-                document.getElementById('discard-top').style.backgroundColor = getCardColor(data.playing_color);
+                if (data.discard_top.color === 'Wild') {
+                    document.getElementById('discard-top').style.backgroundColor = "#808080";
+                } else {
+                    document.getElementById('discard-top').style.backgroundColor = getCardColor(data.playing_color);
+                }
 
                 document.getElementById('draw-deck-size').textContent = `Draw Deck Size: ${data.draw_deck_size}`;
                 document.getElementById('discard-pile-size').textContent = `Discard Pile Size: ${data.discard_pile_size}`;  
@@ -256,7 +260,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("uno_caught", function (data) {
-                alert(`${data.caller} caught ${data.target_player}! ${data.target_player} draws 4 cards.`);
+                alert(`${data.caller} caught ${data.target_player}! ${data.target_player} auto-drawing 2 cards.`);
             });
 
             socket.on("player_disqualified", function(data) {
