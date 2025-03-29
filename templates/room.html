@@ -9,11 +9,15 @@
     </script>
 </head>
 <body>
-    <h1>UNO Room: {{ room_code }}</h1>
+    <div class="room-header">
+        <h1 class="room-title">UNO Room: {{ room_code }}</h1>
+        <button id="leave-room-btn">Leave Room</button>
+    </div>
+    <button id="start-game-btn" class="hidden">Start Game</button>
+
     <h2>Players:</h2>
     <ul id="player-list"></ul>
 
-    <!-- Add below player list -->
     <h2>Discard Pile</h2>
     <div id="discard-top" class="card-static"></div>
     <div id="stack-counter">Stack: 0</div>
@@ -22,20 +26,14 @@
     <div id="draw-deck-size">Draw Deck Size: 0</div>
     <div id="discard-pile-size">Discard Pile Size: 0</div>
 
+    <button id="draw-card-btn" class="hidden">Draw Card</button>
+    <button id="call-uno-btn">Call UNO</button>
+    <button id="new-game-btn" class="hidden">New Game</button>
+
     <h2>Your Hand</h2>
     <div id="hand-container"></div>
 
     <h2 id="current-turn"></h2>
-        
-    <!-- Start Game Button (only for the first player) -->
-    <button id="start-game-btn" style="display: none;">Start Game</button>
-    
-    <button id="leave-room-btn">Leave Room</button>
-
-    <!-- Add this button after start game button -->
-    <button id="draw-card-btn" style="display: none;">Draw Card</button>
-    <button id="call-uno-btn">Call UNO</button>
-    <button id="new-game-btn" style="display: none;">New Game</button>
 
     <script src="/static/js/room.js"></script>
 </body>
