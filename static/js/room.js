@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
             playerList.appendChild(li);
     
             if (!gameStarted && index === 0 && player === localStorage.getItem("username")) {
-                startGameButton.style.display = "block";
+                startGameButton.classList.remove("hidden");
             }
         });
         // Removed the conditional display of callUnoButton; it will always be visible in HTML
@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 
                 alert("Game has started! No new players can join.");
                 updatePlayerList(data.shuffled_players, true);
-                startGameButton.style.display = "none";
+                startGameButton.classList.add("hidden");
             });
 
             socket.on("your_hand", function (data) {
@@ -239,9 +239,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const currentUser = localStorage.getItem("username");
                 if (data.current_player === currentUser) {
-                    drawButton.style.display = "block";
+                    drawButton.classList.remove("hidden");
                 } else {
-                    drawButton.style.display = "none";
+                    drawButton.classList.add("hidden");
                 }
             });
 
@@ -302,10 +302,10 @@ document.addEventListener("DOMContentLoaded", function () {
             socket.on("game_over", function (data) {
                 document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
                 // Hide game controls
-                drawButton.style.display = 'none';
+                drawButton.classList.add("hidden");
                 leaveButton.style.display = 'none';
                 // Show new game button
-                newGameButton.style.display = 'block';
+                newGameButton.classList.remove("hidden");
                 alert(data.winner + " has won the game!");
             });
 
