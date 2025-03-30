@@ -74,7 +74,7 @@ def delayed_removal(token, stop_event, username, room_code, game):
             del disconnect_timers[token]
 
         game.players.remove(username)
-        game.hands.remove(username)
+        game.hands.pop(username)
         print(f"User {token} permanently removed after 30 sec of inactivity.")            
 
         if room_code in rooms and rooms[room_code]['started'] == True:                                
@@ -318,7 +318,7 @@ def handle_draw_card(data):
         game.hands[player] = []
         game.next_player()
         game.players.remove(player)
-        game.hands.remove(player)
+        game.hands.pop(player)
 
         game.draw_pending = False
         game.draw_started = False
@@ -479,7 +479,7 @@ def handle_play_card(data):
         game.hands[player] = []
         game.next_player()
         game.players.remove(player)
-        game.hands.remove(player)
+        game.hands.pop(player)
 
         game.draw_pending = False
         game.draw_started = False

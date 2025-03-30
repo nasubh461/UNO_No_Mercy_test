@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("uno_called", function (data) {
-                alert(`${data.player} called UNO!`);
+                // alert(`${data.player} called UNO!`);
             });
 
             socket.on("uno_caught", function (data) {
