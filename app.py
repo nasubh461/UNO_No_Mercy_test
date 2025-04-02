@@ -302,6 +302,10 @@ def handle_draw_card(data):
     game = rooms[room_code].get('game')
     player = sessions[session_token]['username'] 
 
+    if game.current_players_turn() != player:
+        emit("play_error", {"message": "It's not your turn!"}, room=request.sid)
+        return
+
     if len(game.hands[player]) > 1:
             game.reset_uno(player)
 
