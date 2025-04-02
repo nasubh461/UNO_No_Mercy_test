@@ -323,6 +323,7 @@ def handle_draw_card(data):
         game.draw_pending = False
         game.draw_started = False
         game.roulette = False
+        game.stacked_cards = 0
 
         socketio.emit("player_disqualified", {"player": player}, room=room_code)
         socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
@@ -484,6 +485,7 @@ def handle_play_card(data):
         game.draw_pending = False
         game.draw_started = False
         game.roulette = False
+        game.stacked_cards = 0
 
         socketio.emit("player_disqualified", {"player": player}, room=room_code)
         socketio.emit("update_players", {"players": game.players, "game_started": rooms[room_code]['started']}, room=room_code)
