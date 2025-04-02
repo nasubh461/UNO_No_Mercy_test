@@ -307,6 +307,7 @@ def handle_draw_card(data):
 
     if len(game.hands[player]) >= 25:
         if len(game.players) == 2:
+            rooms[room_code]['started'] = False
             emit("game_over", {
                 "winner": game.players[1], 
                 "discard_top": game.top_card()
@@ -472,6 +473,7 @@ def handle_play_card(data):
     
     if len(game.hands[player]) >= 25:
         if len(game.players) == 2:
+            rooms[room_code]['started'] = False
             emit("game_over", {"winner": game.players[1], "discard_top": game.top_card()}, room=room_code)
             return
         game.deck = game.deck + game.hands[player]
@@ -552,6 +554,8 @@ def handle_play_card(data):
                 "discard_top": game.top_card(),
                 "cards_left": game.cards_remaining()
             }, room=request.sid)
+
+            rooms[room_code]['started'] = False
 
             emit("game_over", {"winner": player, "discard_top": game.top_card()}, room=room_code)
 
