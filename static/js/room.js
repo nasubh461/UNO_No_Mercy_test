@@ -120,13 +120,26 @@ document.addEventListener("DOMContentLoaded", function () {
             const cardBtn = document.createElement('button');
             cardBtn.className = 'card';
 
-            // Add card image instead of just color
+            // Create card container div
+            const cardContainer = document.createElement('div');
+            cardContainer.style.textAlign = 'center';
+
+            // Add card image
             const cardImage = document.createElement('img');
             cardImage.src = getCardImage(card.color, card.type || card.value);
             cardImage.alt = `${card.color} ${card.type || card.value}`;
             cardImage.className = 'card-image';
             cardImage.style.width = '150px';
-            cardBtn.appendChild(cardImage);
+            
+            // Add card caption
+            const caption = document.createElement('div');
+            caption.textContent = `${card.color} ${card.type || card.value}`;
+            caption.style.marginTop = '5px';
+
+            cardContainer.appendChild(cardImage);
+            cardContainer.appendChild(caption);
+            
+            cardBtn.appendChild(cardContainer);
             cardBtn.dataset.index = index;
         
             cardBtn.addEventListener('click', () => handlePlayCard(index, card));
@@ -156,15 +169,25 @@ document.addEventListener("DOMContentLoaded", function () {
         const discardTopDiv = document.getElementById('discard-top');
         discardTopDiv.innerHTML = ''; // Clear existing content
         
+        // Create container div
+        const cardContainer = document.createElement('div');
+        cardContainer.style.textAlign = 'center';
+        
         const cardImage = document.createElement('img');
         cardImage.src = getCardImage(discardTop.color, discardTop.type || discardTop.value);
         cardImage.alt = `${discardTop.color} ${discardTop.type || discardTop.value}`;
         cardImage.style.width = '150px'; // Match the size of hand cards
         cardImage.style.height = 'auto';
         
-        discardTopDiv.appendChild(cardImage);
+        // Add card caption
+        const caption = document.createElement('div');
+        caption.textContent = `${discardTop.color} ${discardTop.type || discardTop.value}`;
+        caption.style.marginTop = '5px';
+
+        cardContainer.appendChild(cardImage);
+        cardContainer.appendChild(caption);
+        discardTopDiv.appendChild(cardContainer);
     }
-    
     function promptColor() {
         return new Promise(resolve => {
             const colorPicker = document.createElement('div');

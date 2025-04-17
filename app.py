@@ -49,7 +49,7 @@ def delayed_removal(token, stop_event, username, room_code, game):
     print(f"Started removing of {token}...")
 
     # Starting a 30s timer
-    for _ in range(30):
+    for _ in range(90):
         if stop_event.is_set():
             print(f"User {username} with session token {token} rejoined, skipping removal.")
             return
