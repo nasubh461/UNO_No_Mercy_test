@@ -150,19 +150,6 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
     }
-
-    function updateDiscardTopDisplay(discardTop) {
-        const discardTopDiv = document.getElementById('discard-top');
-        discardTopDiv.innerHTML = ''; // Clear existing content
-        
-        const cardImage = document.createElement('img');
-        cardImage.src = getCardImage(discardTop.color, discardTop.type || discardTop.value);
-        cardImage.alt = `${discardTop.color} ${discardTop.type || discardTop.value}`;
-        cardImage.style.width = '150px'; // Match the size of hand cards
-        cardImage.style.height = 'auto';
-        
-        discardTopDiv.appendChild(cardImage);
-    }
     
     function promptColor() {
         return new Promise(resolve => {
@@ -208,21 +195,10 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             
             socket.on("game_started", function (data) {
-
-                document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
-                updateDiscardTopDisplay(data.discard_top); // Replace the old discard-top update
-
-                // Keep the color indicator background
-                if (data.discard_top.color === 'Wild') {
-                    document.getElementById('discard-top').style.backgroundColor = "#808080";
-                } else {
-                    document.getElementById('discard-top').style.backgroundColor = getCardColor(data.playing_color);
-                }
-
                 console.log("=== GAME STARTED ===");
                 console.log("Initial Discard:", data.discard_top);
                 console.log("Cards Remaining:", data.cards_left);
-                console.log("====================");  
+                console.log("====================");      
                 
                 alert("Game has started! No new players can join.");
                 updatePlayerList(data.shuffled_players, true);
@@ -239,7 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 currentHand = data.hand;
                 updateHandDisplay();
                 
-                updateDiscardTopDisplay(data.discard_top);
+                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
             });
 
             socket.on("select_player_for_swap", async function(data) {
@@ -340,7 +316,8 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("game_over", function (data) {
-                updateDiscardTopDisplay(data.discard_top);                // Hide game controls
+                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+                // Hide game controls
                 drawButton.classList.add("hidden");
                 leaveButton.style.display = 'none';
                 // Show new game button
