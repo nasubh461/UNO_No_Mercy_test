@@ -150,6 +150,20 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
     }
+
+    // Add this new function near your other utility functions
+    function updateDiscardTopDisplay(discardTop) {
+        const discardTopDiv = document.getElementById('discard-top');
+        discardTopDiv.innerHTML = ''; // Clear existing content
+        
+        const cardImage = document.createElement('img');
+        cardImage.src = getCardImage(discardTop.color, discardTop.type || discardTop.value);
+        cardImage.alt = `${discardTop.color} ${discardTop.type || discardTop.value}`;
+        cardImage.style.width = '150px'; // Match the size of hand cards
+        cardImage.style.height = 'auto';
+        
+        discardTopDiv.appendChild(cardImage);
+    }
     
     function promptColor() {
         return new Promise(resolve => {
@@ -215,7 +229,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 currentHand = data.hand;
                 updateHandDisplay();
                 
-                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+                updateDiscardTopDisplay(data.discard_top); // Update this line
             });
 
             socket.on("select_player_for_swap", async function(data) {
@@ -237,12 +251,13 @@ document.addEventListener("DOMContentLoaded", function () {
             // Add new event listener for game state updates
             socket.on("game_update", function(data) {
                 document.getElementById('current-turn').textContent = `Current turn: ${data.current_player}`;
-                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+                updateDiscardTopDisplay(data.discard_top); // Replace the old discard-top update
 
+                const discardTopDiv = document.getElementById('discard-top');
                 if (data.discard_top.color === 'Wild') {
-                    document.getElementById('discard-top').style.backgroundColor = "#808080";
+                    discardTopDiv.style.backgroundColor = "#808080";
                 } else {
-                    document.getElementById('discard-top').style.backgroundColor = getCardColor(data.playing_color);
+                    discardTopDiv.style.backgroundColor = getCardColor(data.playing_color);
                 }
 
                 document.getElementById('draw-deck-size').textContent = `Draw Deck Size: ${data.draw_deck_size}`;
@@ -316,7 +331,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
             socket.on("game_over", function (data) {
-                document.getElementById('discard-top').textContent = `${data.discard_top.color} ${data.discard_top.type || data.discard_top.value}`;
+                updateDiscardTopDisplay(data.discard_top); // Update this line
                 // Hide game controls
                 drawButton.classList.add("hidden");
                 leaveButton.style.display = 'none';
