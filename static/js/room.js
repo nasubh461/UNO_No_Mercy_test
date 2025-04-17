@@ -99,6 +99,19 @@ document.addEventListener("DOMContentLoaded", function () {
         };
         return colors[color] || '#ffffff';
     }
+
+    function getCardImage(color, value) {
+        const baseUrl = '/static/images/'; // Assuming you'll store card images in this directory
+        // Handle wild cards
+
+        if (color === 'Wild') {
+            return `${baseUrl}wild_${value.toLowerCase().replaceAll(' ', '_')}.png`;
+        }
+        
+        // Handle number cards and action cards
+        const cardValue = value.toString().toLowerCase().replaceAll(' ', '_');
+        return `${baseUrl}${color.toLowerCase()}_${cardValue}.png`;
+    }
     
     function updateHandDisplay() {
         const container = document.getElementById('hand-container');
@@ -106,19 +119,16 @@ document.addEventListener("DOMContentLoaded", function () {
         currentHand.forEach((card, index) => {
             const cardBtn = document.createElement('button');
             cardBtn.className = 'card';
-            cardBtn.style.backgroundColor = getCardColor(card.color);
-            cardBtn.innerHTML = `
-                <div class="card-top">${card.color}</div>
-                <div class="card-center">${card.type || card.value}</div>
-            `;
+
+            // Add card image instead of just color
+            const cardImage = document.createElement('img');
+            cardImage.src = getCardImage(card.color, card.type || card.value);
+            cardImage.alt = `${card.color} ${card.type || card.value}`;
+            cardImage.className = 'card-image';
+            cardImage.style.width = '150px';
+            cardBtn.appendChild(cardImage);
             cardBtn.dataset.index = index;
-            
-            // Add different style for wild cards
-            if (card.color === 'Wild') {
-                cardBtn.classList.add('wild-card');
-                cardBtn.style.color = 'white';
-            }
-            
+        
             cardBtn.addEventListener('click', () => handlePlayCard(index, card));
             container.appendChild(cardBtn);
         });
