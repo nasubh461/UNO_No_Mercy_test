@@ -35,28 +35,6 @@ document.addEventListener("DOMContentLoaded", function () {
         window.location.href = "/";
     });
 
-    function promptPlayerSelection(players) {
-        return new Promise(resolve => {
-            const playerPicker = document.createElement('div');
-            playerPicker.innerHTML = `
-                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px;">
-                    <p>Choose a player to swap hands with:</p>
-                    ${players.map(player => `<button style="padding: 10px;" data-player="${player}">${player}</button>`).join('')}
-                </div>
-            `;
-            
-            document.body.appendChild(playerPicker);
-            
-            playerPicker.querySelectorAll('button').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.body.removeChild(playerPicker);
-                    resolve(e.target.dataset.player);
-                });
-            });
-        });
-        
-    }
-
     function updatePlayerList(players, gameStarted, playerHands = {}, unoFlags = {}) {
         playerList.innerHTML = "";
         players.forEach((player, index) => {
@@ -183,25 +161,104 @@ document.addEventListener("DOMContentLoaded", function () {
         cardContainer.appendChild(caption);
         discardTopDiv.appendChild(cardContainer);
     }
+
     function promptColor() {
         return new Promise(resolve => {
-            const colorPicker = document.createElement('div');
-            colorPicker.innerHTML = `
-                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px;">
-                    <p>Choose a color:</p>
-                    <button style="background: red; padding: 10px;" data-color="Red"></button>
-                    <button style="background: blue; padding: 10px;" data-color="Blue"></button>
-                    <button style="background: green; padding: 10px;" data-color="Green"></button>
-                    <button style="background: yellow; padding: 10px;" data-color="Yellow"></button>
+            const overlay = showOverlayPrompt(`
+                <div style="width:100%;text-align:center;">
+                    <p style="font-size:2rem;margin-bottom:2rem;">Choose a color:</p>
+                    <div style="display:flex;justify-content:center;gap:40px;">
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <button style="background: red; width:100px; height:100px; border-radius:50%; border:none; font-size:1.5rem; color:white;" data-color="Red"></button>
+                            <span style="margin-top:10px; font-size:1.3rem; text-align:center;">Red</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <button style="background: blue; width:100px; height:100px; border-radius:50%; border:none; font-size:1.5rem; color:white;" data-color="Blue"></button>
+                            <span style="margin-top:10px; font-size:1.3rem; text-align:center;">Blue</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <button style="background: green; width:100px; height:100px; border-radius:50%; border:none; font-size:1.5rem; color:white;" data-color="Green"></button>
+                            <span style="margin-top:10px; font-size:1.3rem; text-align:center;">Green</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;">
+                            <button style="background: yellow; width:100px; height:100px; border-radius:50%; border:none; font-size:1.5rem; color:black;" data-color="Yellow"></button>
+                            <span style="margin-top:10px; font-size:1.3rem; text-align:center;">Yellow</span>
+                        </div>
+                    </div>
                 </div>
-            `;
-            
-            document.body.appendChild(colorPicker);
-            
-            colorPicker.querySelectorAll('button').forEach(btn => {
+            `);
+    
+            overlay.querySelectorAll('button[data-color]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.body.removeChild(colorPicker);
+                    removeOverlayPrompt();
                     resolve(e.target.dataset.color);
+                });
+            });
+        });
+    }
+    
+    function showOverlayPrompt(innerHtml) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'custom-overlay-prompt';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.background = 'rgba(0,0,0,0.7)';
+        overlay.style.zIndex = '9999';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+
+        // Prevent interaction with rest of the page
+        document.body.style.pointerEvents = 'none';
+
+        // Prompt content
+        const promptBox = document.createElement('div');
+        promptBox.style.background = 'white';
+        promptBox.style.padding = '40px';
+        promptBox.style.borderRadius = '20px';
+        promptBox.style.boxShadow = '0 0 30px #0008';
+        promptBox.style.minWidth = '350px';
+        promptBox.style.minHeight = '200px';
+        promptBox.style.display = 'flex';
+        promptBox.style.flexDirection = 'column';
+        promptBox.style.alignItems = 'center';
+        promptBox.style.justifyContent = 'center';
+        promptBox.innerHTML = innerHtml;
+
+        overlay.appendChild(promptBox);
+        document.body.appendChild(overlay);
+
+        // Only allow interaction with the prompt
+        promptBox.style.pointerEvents = 'auto';
+
+        return overlay;
+    }
+
+    function removeOverlayPrompt() {
+        const overlay = document.getElementById('custom-overlay-prompt');
+        if (overlay) overlay.remove();
+        document.body.style.pointerEvents = 'auto';
+    }
+
+    function promptPlayerSelection(players) {
+        return new Promise(resolve => {
+            const overlay = showOverlayPrompt(`
+                <div style="width:100%;text-align:center;">
+                    <p style="font-size:2rem;margin-bottom:2rem;">Choose a player to swap hands with:</p>
+                    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:20px;">
+                        ${players.map(player => `<button style="font-size:1.5rem;padding:20px 40px;min-width:180px;" data-player="${player}">${player}</button>`).join('')}
+                    </div>
+                </div>
+            `);
+
+            overlay.querySelectorAll('button[data-player]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    removeOverlayPrompt();
+                    resolve(e.target.dataset.player);
                 });
             });
         });
