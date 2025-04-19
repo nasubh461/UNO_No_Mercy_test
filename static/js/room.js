@@ -30,11 +30,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Add click handler for new game button
     newGameButton.addEventListener("click", function() {
-        // socket.emit("leave_room", { 
-        //     room: roomCode, 
-        //     username: localStorage.getItem("username"), 
-        //     session: sessionToken 
-        // });
         localStorage.removeItem("session_token");
         localStorage.removeItem("username");
         window.location.href = "/";
@@ -228,7 +223,9 @@ document.addEventListener("DOMContentLoaded", function () {
             socket.emit("join_room", { room: roomCode, username: username, session: sessionToken });
 
             socket.on("update_players", function (data) {
-                updatePlayerList(data.players, data.game_started);
+                if (!data.game_started) {
+                    updatePlayerList(data.players, data.game_started);
+                }
             });
             
             socket.on("game_started", function (data) {
@@ -289,7 +286,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('stack-counter').textContent = `Stack: ${data.stacked_cards}`;  // Update stack counter
                 document.getElementById('playing-color').textContent = `Playing Color: ${data.playing_color || 'None'}`;  // Update playing color               
                 // Update player list with hand sizes
-                updatePlayerList(data.player_hands ? Object.keys(data.player_hands) : [], true, data.player_hands, data.uno_flags);
+                updatePlayerList(
+                    data.player_hands ? Object.keys(data.player_hands) : [],
+                    true,
+                    data.player_hands,
+                    data.uno_flags
+                );
 
                 const currentUser = localStorage.getItem("username");
                 if (data.current_player === currentUser) {
