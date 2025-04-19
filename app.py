@@ -676,6 +676,28 @@ def handle_play_card(data):
     else:
         socketio.emit("play_error", {"message": "You must draw cards until you get a card that matches the color choosen."}, room=request.sid)
 
+@socketio.on("check_game_states")
+def handle_check_game_states(data):
+    room_code = data.get('room')
+    if room_code in rooms:
+        game = rooms[room_code].get('game')
+        if game:
+            current_player = game.current_players_turn()
+            # Check for pending roulette
+            if game.roulette and game.awaiting_color_choice:
+                emit("pending_roulette", {
+                    "needs_selection": True,
+                    "current_player": current_player
+                })
+            # Check for pending player selection (card 7)
+            elif game.awaiting_player_choice:
+                other_players = [p for p in game.players if p != current_player]
+                emit("pending_player_selection", {
+                    "needs_selection": True,
+                    "current_player": current_player,
+                    "available_players": other_players
+                })
+                
 @socketio.on("call_uno")
 def handle_call_uno(data):
     room_code = data.get('room')
