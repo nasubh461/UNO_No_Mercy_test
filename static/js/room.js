@@ -279,6 +279,9 @@ document.addEventListener("DOMContentLoaded", function () {
             // Emit event to join room
             socket.emit("join_room", { room: roomCode, username: username, session: sessionToken });
 
+            // Add this new line to check roulette state after joining
+            socket.emit("check_roulette_state", { room: roomCode });
+
             socket.on("update_players", function (data) {
                 if (!data.game_started) {
                     updatePlayerList(data.players, data.game_started);
@@ -307,6 +310,24 @@ document.addEventListener("DOMContentLoaded", function () {
                 updateHandDisplay();
                 
                 updateDiscardTopDisplay(data.discard_top); // Update this line
+            });
+
+            // Add new handler for pending roulette check
+            socket.on("pending_roulette", async function(data) {
+                if (data.needs_selection && data.current_player === username) {
+                    console.log("=== RESUMING ROULETTE SELECTION ===");
+                    try {
+                        const color = await promptColor();
+                        if (color) {
+                            socket.emit("color_selected", { 
+                                room: roomCode,
+                                color: color
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Color selection failed:", error);
+                    }
+                }
             });
 
             socket.on("select_player_for_swap", async function(data) {

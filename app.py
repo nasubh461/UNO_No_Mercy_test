@@ -802,6 +802,18 @@ def handle_color_selected(data):
             "discard_pile_size": len(game.discard_pile),
             "uno_flags": game.uno_flags
         }, room=room_code)
+
+@socketio.on("check_roulette_state")
+def handle_check_roulette_state(data):
+    room_code = data.get('room')
+    if room_code in rooms:
+        game = rooms[room_code].get('game')
+        if game and game.roulette and game.awaiting_color_choice:
+            current_player = game.current_players_turn()
+            emit("pending_roulette", {
+                "needs_selection": True,
+                "current_player": current_player
+            })
             
 @socketio.on("player_selected_for_swap")
 def handle_player_selected_for_swap(data):
