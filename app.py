@@ -61,6 +61,15 @@ def delayed_removal(token, stop_event, username, room_code, game):
             # Remove the disconnected player
             rooms[room_code]['players'].remove(username)
 
+            if len(rooms[room_code]['players']) == 1:
+                # Notify the remaining player
+                #Show alert to the remaining player that the game is over
+                socketio.emit("game_over", {
+                    "winner": rooms[room_code]['players'][0], 
+                    "discard_top": game.top_card()
+                }, room=room_code)
+                rooms[room_code]['started'] = False               
+
             # Case 1: Room is now empty
             if not rooms[room_code]['players']:
                 print(f"Room {room_code} empty. Deleting and notifying.")
