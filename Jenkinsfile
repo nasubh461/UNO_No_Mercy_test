@@ -7,6 +7,7 @@ pipeline {
 		
 			steps {
 				echo 'deleting previous image'
+				sh 'docker rm -f uno'
 				sh ' docker rmi uno:latest'
 				echo 'deletion complete'
 			
@@ -27,7 +28,7 @@ pipeline {
 		
 			steps {
 				echo 'deploying new image'
-				sh 'docker run -d uno:latest'
+				sh 'docker run -dit -name uno uno:latest'
 				echo 'deployment complete'
 				
 				}
